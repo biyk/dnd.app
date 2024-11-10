@@ -2,6 +2,8 @@ import os
 import json
 import sys
 from flask import Flask, render_template, request, jsonify, send_from_directory
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 # Определяем базовый путь приложения
 if getattr(sys, 'frozen', False):
@@ -54,50 +56,74 @@ def get_map_config(map_name):
     except FileNotFoundError:
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
+
 @app.route('/api/polygons', methods=['POST'])
 def save_polygons():
     # Получаем данные из запроса
     data = request.get_json()
 
-    map_name = data.get('mapName')  # Извлекаем mapName из данных запроса
-    polygons = data.get('polygons', [])
+    map_name = data.get('mapName')
+    polygons_data = data.get('polygons', [])
     map_state = data.get('mapState', {})
 
-    # Проверяем, что mapName был передан
     if not map_name:
         return jsonify({"error": "mapName is required"}), 400
 
-    # Путь к файлу конфигурации карты
     config_file_path = os.path.join(CONFIG_PATH, f"{map_name}.json")
 
-    # Проверяем, существует ли файл конфигурации
     if not os.path.isfile(config_file_path):
         return jsonify({"error": f"Configuration file for map '{map_name}' not found"}), 404
 
-    # Загрузка данных из файла конфигурации карты
     try:
         with open(config_file_path, 'r') as f:
             map_config = json.load(f)
     except json.JSONDecodeError:
         return jsonify({"error": f"Error decoding JSON in file '{config_file_path}'"}), 500
 
-    # Дополняем конфигурацию карты новыми данными из запроса
-    map_config['polygons'] = polygons
+    # Обработка и обрезка пересекающихся полигонов
+    updated_polygons = []
+    for i, poly_data in enumerate(polygons_data):
+        polygon = Polygon(poly_data['points'])
+        is_visible = poly_data.get('isVisible', True)
+
+        for j, prev_poly_data in enumerate(updated_polygons):
+            prev_polygon = Polygon(prev_poly_data['points'])
+
+            if polygon.intersects(prev_polygon):
+                # Обрезаем полигон, если он пересекается с предыдущим
+                polygon = polygon.difference(prev_polygon)
+
+        # Проверяем, является ли результатом многоугольник или мульти-многоугольник
+        if polygon.is_empty:
+            continue  # Пропускаем пустые геометрии после обрезки
+        elif polygon.geom_type == 'MultiPolygon':
+            # Если результат - MultiPolygon, обрабатываем каждый отдельный полигон через polygon.geoms
+            for single_polygon in polygon.geoms:
+                updated_polygons.append({
+                    "points": list(single_polygon.exterior.coords),
+                    "isVisible": is_visible
+                })
+        else:
+            # Если результат - один Polygon, добавляем его как есть
+            updated_polygons.append({
+                "points": list(polygon.exterior.coords),
+                "isVisible": is_visible
+            })
+
+    # Обновляем конфигурацию карты
+    map_config['polygons'] = updated_polygons
     map_config['mapState'] = map_state
 
-    # Здесь можно сохранить или обработать обновленные данные
-    print("Received polygons data:", polygons)
-    print("Received map state:", map_state)
+    print("Updated polygons data:", updated_polygons)
+    print("Updated map state:", map_state)
     print("Updated map configuration:", map_config)
 
-    # Сохраняем обновленный JSON обратно в файл
     try:
         with open(config_file_path, 'w') as f:
-            json.dump(map_config, f, indent=4)  # Сохранение с отступами для удобства чтения
+            json.dump(map_config, f, indent=4)
     except IOError:
         return jsonify({"error": f"Error saving updated configuration to '{config_file_path}'"}), 500
 
-    # Возвращаем обновленную конфигурацию как подтверждение
     return jsonify({"status": "success", "updatedConfig": map_config})
 
 if __name__ == '__main__':
