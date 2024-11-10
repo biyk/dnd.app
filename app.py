@@ -65,6 +65,7 @@ def save_polygons():
     map_name = data.get('mapName')
     polygons_data = data.get('polygons', [])
     map_state = data.get('mapState', {})
+    main_poligon = data.get('mainPolygon', {})
 
     if not map_name:
         return jsonify({"error": "mapName is required"}), 400
@@ -113,6 +114,7 @@ def save_polygons():
     # Обновляем конфигурацию карты
     map_config['polygons'] = updated_polygons
     map_config['mapState'] = map_state
+    map_config['mainPolygon'] = main_poligon
 
     print("Updated polygons data:", updated_polygons)
     print("Updated map state:", map_state)

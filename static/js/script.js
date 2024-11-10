@@ -128,6 +128,17 @@ let mainPolygon = null;
       });
     });
 
+  // Если в конфигурации есть данные о mainPolygon, создаем его
+  if (config.mainPolygon) {
+    const polygonLayer = L.polygon(config.mainPolygon.points, {
+      color: 'black',
+      fillColor: 'black',
+      fillOpacity: 1.0,
+      weight: 3
+    }).addTo(map);
+    mainPolygon = polygonLayer;
+  }
+
     // Кнопка для включения/выключения режима рисования
     const drawButton = document.getElementById('draw-button');
     drawButton.addEventListener('click', () => {
@@ -206,6 +217,9 @@ let mainPolygon = null;
         body: JSON.stringify({
           mapName: mapName,  // Отправляем mapName
           polygons: polygonsData,
+        mainPolygon: mainPolygon ? {
+          points: mainPolygon.getLatLngs()
+        } : null,  // Отправляем данные mainPolygon
           mapState: {
             center: { lat: center.lat, lng: center.lng },
             zoom: zoomLevel
