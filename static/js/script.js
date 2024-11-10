@@ -86,13 +86,20 @@ let mainPolygon = null;
       }).addTo(map);
 
       polygonLayer.isVisible = polygonData.isVisible;
-      polygonLayer.on('click', function () {
+    polygonLayer.on('click', function (e) {
+      if (e.originalEvent.ctrlKey) {  // Проверяем, зажат ли Ctrl
+        map.removeLayer(this);  // Удаляем полигон с карты
+        polygons = polygons.filter(p => p.layer !== this);  // Удаляем из массива
+        sendPolygonsData();  // Отправляем обновленные данные на сервер
+      } else {
+        // Переключение видимости полигона
         this.isVisible = !this.isVisible;
         this.setStyle({
           fillOpacity: this.isVisible ? 1.0 : 0.0,
           opacity: this.isVisible ? 1.0 : 0.0
         });
         sendPolygonsData(); // Отправляем данные после изменения видимости
+      }
       });
 
       // Добавляем полигон в массив
@@ -120,7 +127,12 @@ let mainPolygon = null;
 
         // Добавляем обработчик клика для переключения видимости полигона
         polygonLayer.isVisible = true;
-        polygonLayer.on('click', function () {
+      polygonLayer.on('click', function (e) {
+        if (e.originalEvent.ctrlKey) {  // Удаление полигона при зажатом Ctrl
+          map.removeLayer(this);
+          polygons = polygons.filter(p => p.layer !== this);
+          sendPolygonsData();
+        } else {
           this.isVisible = !this.isVisible;
           this.setStyle({
             fillOpacity: this.isVisible ? 1.0 : 0.0,
@@ -128,6 +140,7 @@ let mainPolygon = null;
           });
           // Отправляем данные на бэк при изменении видимости
           sendPolygonsData();
+        }
         });
 
         // Удаление маркеров после завершения рисования
