@@ -6,6 +6,7 @@ let polygonPoints = [];  // Точки текущего полигона
 let polygonMarkers = [];  // Маркеры для точек полигона
 let markerCount = 0;  // Счётчик маркеров
 let drawingMode = false;  // Режим рисования
+let lastUpdated = 0;  // Переменная для хранения последней временной метки
 
 // Функция для получения начальной конфигурации
 async function getInit() {
@@ -38,11 +39,15 @@ async function initMap() {
   const config = await getConfig(mapName);
   if (!config) return;
 
+  lastUpdated = config.lastUpdated;  // Сохраняем временную метку
   initializeMap(config);  // Инициализация карты
   createPolygons(config);  // Создание полигонов из конфигурации
   setDrawButtonHandler();  // Настройка обработчика для кнопки рисования
   setReverseButtonHandler(config);  // Настройка обработчика для кнопки reverse
   setMapEventHandlers();  // Обработчики событий для карты
+
+  // Запускаем периодическую проверку на изменения конфигурации
+  setInterval(checkForConfigUpdates, 1000);  // Проверка каждые 10 секунд
 }
 
 // Функция для инициализации карты
@@ -79,6 +84,9 @@ function initializeMap(config) {
 
 // Функция для создания полигонов из конфигурации
 function createPolygons(config) {
+  polygons.forEach(polygon => map.removeLayer(polygon.layer));  // Удаление старых полигонов
+  polygons = [];  // Очистка массива полигонов
+
   config.polygons.forEach(polygonData => {
     const polygonLayer = L.polygon(polygonData.points, {
       color: 'black',
@@ -101,6 +109,7 @@ function createPolygons(config) {
 
   // Если в конфигурации есть данные о mainPolygon, создаем его
   if (config.mainPolygon) {
+    if (mainPolygon) map.removeLayer(mainPolygon);  // Удаляем старый главный полигон, если он существует
     mainPolygon = L.polygon(config.mainPolygon.points, {
       color: 'black',
       fillColor: 'black',
@@ -249,6 +258,16 @@ function createMainPolygon(config) {
     fillOpacity: 1,
     weight: 3
   }).addTo(map);
+}
+// Функция для проверки обновлений конфигурации
+async function checkForConfigUpdates() {
+  const config = await getConfig(mapName);
+  if (config && config.lastUpdated !== lastUpdated) {
+    lastUpdated = config.lastUpdated;  // Обновляем временную метку
+    createPolygons(config);  // Обновляем полигоны
+    map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);  // Обновляем центр и зум карты
+    console.log("Map data updated due to configuration change.");
+  }
 }
 
 // Функция для установки прозрачности всех полигонов

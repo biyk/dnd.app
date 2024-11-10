@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from flask import Blueprint, request, jsonify, current_app
 from shapely.geometry import Polygon
 
@@ -60,6 +61,7 @@ def save_polygons():
     map_config['polygons'] = updated_polygons
     map_config['mapState'] = map_state
     map_config['mainPolygon'] = main_polygon
+    map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
 
     try:
         with open(config_file_path, 'w') as f:
