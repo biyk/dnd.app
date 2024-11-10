@@ -75,6 +75,21 @@ let mainPolygon = null;
     let markerCount = 0;
     let drawingMode = false;
 
+  // Функции для изменения прозрачности полигонов и отключения/включения кликов
+  function setPolygonsOpacity(opacity) {
+    polygons.forEach(p => p.layer.setStyle({ fillOpacity: opacity }));
+  }
+
+  function setPolygonClickability(enabled) {
+    polygons.forEach(p => {
+      if (enabled) {
+        p.layer.on('click', p.layer.clickHandler);
+      } else {
+        p.layer.off('click', p.layer.clickHandler);
+      }
+    });
+  }
+
     // Рисуем полигоны из конфигурации
     config.polygons.forEach(polygonData => {
       const polygonLayer = L.polygon(polygonData.points, {
@@ -86,8 +101,10 @@ let mainPolygon = null;
       }).addTo(map);
 
       polygonLayer.isVisible = polygonData.isVisible;
-    polygonLayer.on('click', function (e) {
-      if (e.originalEvent.ctrlKey) {  // Проверяем, зажат ли Ctrl
+
+    // Обработчик клика, привязываем его для повторного включения
+    polygonLayer.clickHandler = function (e) {
+      if (e.originalEvent.ctrlKey) {
         map.removeLayer(this);  // Удаляем полигон с карты
         polygons = polygons.filter(p => p.layer !== this);  // Удаляем из массива
         sendPolygonsData();  // Отправляем обновленные данные на сервер
@@ -100,9 +117,10 @@ let mainPolygon = null;
         });
         sendPolygonsData(); // Отправляем данные после изменения видимости
       }
-      });
+    };
 
-      // Добавляем полигон в массив
+    polygonLayer.on('click', polygonLayer.clickHandler);
+
       polygons.push({
         layer: polygonLayer,
         points: polygonData.points,
@@ -114,10 +132,16 @@ let mainPolygon = null;
     const drawButton = document.getElementById('draw-button');
     drawButton.addEventListener('click', () => {
       drawingMode = !drawingMode;
-      drawButton.textContent = drawingMode ? "Drawing" : "Draw Polygon";  // Изменяем текст кнопки
+      drawButton.textContent = drawingMode ? "Finish Drawing" : "Draw Polygon";  // Изменяем текст кнопки
 
-      if (!drawingMode && polygonPoints.length > 2) {
-        // Завершение рисования и добавление полигона
+    if (drawingMode) {
+      setPolygonsOpacity(0.6);  // Устанавливаем прозрачность в 0.6
+      setPolygonClickability(false);  // Игнорируем клики на полигонах
+    } else {
+      setPolygonsOpacity(1.0);  // Возвращаем прозрачность
+      setPolygonClickability(true);  // Включаем клики на полигонах
+
+      if (polygonPoints.length > 2) {
         const polygonLayer = L.polygon(polygonPoints, {
           color: 'black',
           fillColor: 'black',
@@ -127,8 +151,8 @@ let mainPolygon = null;
 
         // Добавляем обработчик клика для переключения видимости полигона
         polygonLayer.isVisible = true;
-      polygonLayer.on('click', function (e) {
-        if (e.originalEvent.ctrlKey) {  // Удаление полигона при зажатом Ctrl
+        polygonLayer.clickHandler = function (e) {
+          if (e.originalEvent.ctrlKey) {
           map.removeLayer(this);
           polygons = polygons.filter(p => p.layer !== this);
           sendPolygonsData();
@@ -141,11 +165,9 @@ let mainPolygon = null;
           // Отправляем данные на бэк при изменении видимости
           sendPolygonsData();
         }
-        });
+        };
 
-        // Удаление маркеров после завершения рисования
-        polygonMarkers.forEach(marker => map.removeLayer(marker));
-        polygonMarkers = [];
+        polygonLayer.on('click', polygonLayer.clickHandler);
 
         // Сохранение полигона и его видимости
         polygons.push({
@@ -154,12 +176,15 @@ let mainPolygon = null;
           isVisible: polygonLayer.isVisible
         });
 
+        polygonMarkers.forEach(marker => map.removeLayer(marker));
+        polygonMarkers = [];
         polygonPoints = [];
         markerCount = 0;
 
         // Отправляем данные на бэк после завершения рисования
         sendPolygonsData();
       }
+    }
     });
 
     // Функция для отправки данных о полигонах на бэк
@@ -204,8 +229,8 @@ let mainPolygon = null;
         className: 'numbered-icon',
         iconSize: [10, 10],
         html: `<div style="display: flex; align-items: center;">
-                 <div style="width: 6px; height: 6px; background-color: black; border-radius: 50%;"></div>
-                 <span style="margin-left: 5px; font-size: 10px;">${number}</span>
+                 <div style="min-width: 6px; height: 6px; background-color: red; border-radius: 50%;"></div>
+                 <span style="color:red; margin-left: 5px; font-size: 10px;">${number}</span>
                </div>`
       });
     }
