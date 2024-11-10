@@ -97,7 +97,7 @@ let mainPolygon = null;
         fillColor: 'black',
         fillOpacity: polygonData.isVisible ? 1.0 : 0.0,
         opacity: polygonData.isVisible ? 1.0 : 0.0,
-        weight: 3
+        weight: 1
       }).addTo(map);
 
       polygonLayer.isVisible = polygonData.isVisible;
@@ -146,7 +146,7 @@ let mainPolygon = null;
           color: 'black',
           fillColor: 'black',
           fillOpacity: 1.0,
-          weight: 3
+          weight: 1
         }).addTo(map);
 
         // Добавляем обработчик клика для переключения видимости полигона
