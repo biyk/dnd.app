@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import webbrowser  # Импортируем модуль для открытия браузера
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
@@ -21,7 +22,6 @@ app = Flask(__name__, template_folder=template_folder)
 CONFIG_PATH = os.path.join(app_path, 'configs')
 IMAGES_PATH = os.path.join(app_path, 'images')
 
-print(template_folder);
 # Хранение данных о полигонах (пока в памяти)
 polygons_data = []
 
@@ -129,4 +129,8 @@ def save_polygons():
     return jsonify({"status": "success", "updatedConfig": map_config})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Запускаем сервер
+    app.run(debug=True, use_reloader=False)  # use_reloader=False чтобы избежать двойного открытия браузера
+
+    # После старта сервер автоматически откроет браузер на главной странице
+    webbrowser.open("http://127.0.0.1:5000/")  # Открываем браузер по адресу приложения
