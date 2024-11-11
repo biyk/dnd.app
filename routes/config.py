@@ -1,6 +1,8 @@
 import json
 import os
-from flask import Blueprint, jsonify
+import time
+
+from flask import Blueprint, request, jsonify
 
 # Создаем Blueprint для работы с конфигурациями
 config_bp = Blueprint('config', __name__)
@@ -31,6 +33,33 @@ def get_map_config(map_name):
         config_path = get_config_path()
         with open(f"{config_path}/{map_name}.json", 'r') as f:
             map_config = json.load(f)
+        return jsonify(map_config)
+    except FileNotFoundError:
+        return jsonify({"error": f"{map_name}.json not found"}), 404
+
+
+@config_bp.route('/config/ambience', methods=['POST'])
+def set_ambience_config():
+    data = request.get_json()
+
+    ambience = data.get('ambience')
+    try:
+        # Открываем файл конфигурации карты
+        config_path = get_config_path()
+        with open(f"{config_path}/init.json", 'r') as f:
+            init_config = json.load(f)
+        map_name = init_config['map'];
+        with open(f"{config_path}/{map_name}.json", 'r') as f:
+            map_config = json.load(f)
+        map_config['ambience'] = ambience
+        map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
+
+        try:
+            with open(f"{config_path}/{map_name}.json", 'w') as f:
+                json.dump(map_config, f, indent=4)
+        except IOError:
+            return jsonify({"error": f"Error saving updated configuration to '{config_path}/{map_name}'"}), 500
+
         return jsonify(map_config)
     except FileNotFoundError:
         return jsonify({"error": f"{map_name}.json not found"}), 404

@@ -274,12 +274,24 @@ function updateMainPoligon(config){
   mainPolygon.setLatLngs([mainPolygon.getLatLngs()[0], holes]);
 }
 
+function setAudio(config) {
+  const audio = document.getElementById('audio');
+  let src = '/static/audio/'+config.ambience+'.mp3';
+  console.log(src);
+  console.log(audio.src);
+  if (audio.src.indexOf(src)==-1) {
+  audio.src = src;
+  audio.play();
+  }
+}
+
 // Функция для проверки обновлений конфигурации
 async function checkForConfigUpdates() {
   const config = await getConfig(mapName);
   if (config && config.lastUpdated !== lastUpdated) {
     lastUpdated = config.lastUpdated;  // Обновляем временную метку
     createPolygons(config);  // Обновляем полигоны
+    setAudio(config)
     map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);  // Обновляем центр и зум карты
     console.log("Map data updated due to configuration change.");
   }
