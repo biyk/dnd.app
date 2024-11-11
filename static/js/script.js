@@ -52,7 +52,7 @@ async function initMap() {
 
 // Функция для инициализации карты
 function initializeMap(config) {
-  const image = `/images/${config.image}`;
+  const image = `/static/images/${config.image}`;
   const width = config.width;
   const height = config.height;
   const maxLevel = config.maxLevel;
