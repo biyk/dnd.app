@@ -267,7 +267,7 @@ function createMainPolygon(config) {
 }
 
 function updateMainPoligon(config){
-    let holes = [];
+  let holes = [];
   config.polygons.forEach(polygonData => {
     holes.push(polygonData.points);
   });

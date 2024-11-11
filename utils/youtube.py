@@ -3,13 +3,13 @@ import json
 from yt_dlp import YoutubeDL
 
 # Загружаем JSON-файл с ID видео
-with open('videos.json', 'r', encoding='utf-8') as file:
+with open('../static/audio/ambience.json', 'r', encoding='utf-8') as file:
     video_data = json.load(file)
 
 
 print(video_data)
 # Создаем папку audio, если она еще не существует
-output_folder = 'audio'
+output_folder = '../static/audio'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
