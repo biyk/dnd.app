@@ -42,7 +42,6 @@ def get_map_config(map_name):
 def set_ambience_config():
     data = request.get_json()
 
-    ambience = data.get('ambience')
     try:
         # Открываем файл конфигурации карты
         config_path = get_config_path()
@@ -51,7 +50,7 @@ def set_ambience_config():
         map_name = init_config['map'];
         with open(f"{config_path}/{map_name}.json", 'r') as f:
             map_config = json.load(f)
-        map_config['ambience'] = ambience
+
         map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
 
         try:
@@ -61,5 +60,58 @@ def set_ambience_config():
             return jsonify({"error": f"Error saving updated configuration to '{config_path}/{map_name}'"}), 500
 
         return jsonify(map_config)
+    except FileNotFoundError:
+        return jsonify({"error": f"{map_name}.json not found"}), 404
+
+
+@config_bp.route('/config/init', methods=['POST'])
+def set_init_config():
+    data = request.get_json()
+
+
+    round = data.get('round')
+    _try = data.get('try')
+    all = data.get('all')
+    try:
+        # Открываем файл конфигурации карты
+        config_path = get_config_path()
+        with open(f"{config_path}/init.json", 'r') as f:
+            init_config = json.load(f)
+        map_name = init_config['map'];
+        with open(f"{config_path}/{map_name}.json", 'r') as f:
+            map_config = json.load(f)
+
+        map_config['init'] = {
+            'round':round,
+            'try':_try,
+            'all':all,
+        }
+
+        map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
+
+        try:
+            with open(f"{config_path}/{map_name}.json", 'w') as f:
+                json.dump(map_config, f, indent=4)
+        except IOError:
+            return jsonify({"error": f"Error saving updated configuration to '{config_path}/{map_name}'"}), 500
+
+        return jsonify(map_config)
+    except FileNotFoundError:
+        return jsonify({"error": f"{map_name}.json not found"}), 404
+
+
+@config_bp.route('/config/init', methods=['GET'])
+def set_init_config():
+
+    try:
+        # Открываем файл конфигурации карты
+        config_path = get_config_path()
+        with open(f"{config_path}/init.json", 'r') as f:
+            init_config = json.load(f)
+        map_name = init_config['map'];
+        with open(f"{config_path}/{map_name}.json", 'r') as f:
+            map_config = json.load(f)
+
+        return jsonify(map_config.init)
     except FileNotFoundError:
         return jsonify({"error": f"{map_name}.json not found"}), 404
