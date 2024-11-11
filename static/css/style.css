@@ -187,7 +187,11 @@ body, html, #map {
         .toggle-form-button:hover {
             background-color: #0056b3;
         }
-            .character-row.current-turn {
-        background-color: #ffd700;
-        font-weight: bold;
-    }
+        .character-row.current-turn {
+            background-color: #ffd700;
+            font-weight: bold;
+        }
+
+        .character-npc {
+            background-color: lightcoral;
+        }
