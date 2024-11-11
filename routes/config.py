@@ -1,117 +1,110 @@
 import json
 import os
 import time
-
 from flask import Blueprint, request, jsonify
 
 # Создаем Blueprint для работы с конфигурациями
 config_bp = Blueprint('config', __name__)
 
-# Путь к конфигурационным файлам
+# Получаем путь к конфигурациям
 def get_config_path():
-    # Получаем путь к конфигурациям
     from app import app_path  # импортируем app_path локально, чтобы избежать циклического импорта
     return os.path.join(app_path, 'configs')
+
+# Вспомогательная функция для загрузки JSON файла конфигурации
+def load_config(file_name):
+    config_path = get_config_path()
+    try:
+        with open(os.path.join(config_path, f"{file_name}.json"), 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+
+# Вспомогательная функция для сохранения JSON файла конфигурации
+def save_config(file_name, config_data):
+    config_path = get_config_path()
+    try:
+        with open(os.path.join(config_path, f"{file_name}.json"), 'w') as f:
+            json.dump(config_data, f, indent=4)
+        return True
+    except IOError:
+        return False
 
 # Маршрут для получения начальной конфигурации
 @config_bp.route('/config', methods=['GET'])
 def get_init_config():
-    try:
-        # Открываем файл начальной конфигурации
-        config_path = get_config_path()
-        with open(f"{config_path}/init.json", 'r') as f:
-            init_config = json.load(f)
-        return jsonify(init_config)
-    except FileNotFoundError:
+    init_config = load_config("init")
+    if init_config is None:
         return jsonify({"error": "init.json not found"}), 404
+    return jsonify(init_config)
 
 # Маршрут для получения конфигурации карты по названию
 @config_bp.route('/configs/<map_name>', methods=['GET'])
 def get_map_config(map_name):
-    try:
-        # Открываем файл конфигурации карты
-        config_path = get_config_path()
-        with open(f"{config_path}/{map_name}.json", 'r') as f:
-            map_config = json.load(f)
-        return jsonify(map_config)
-    except FileNotFoundError:
+    map_config = load_config(map_name)
+    if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
+    return jsonify(map_config)
 
-
+# Маршрут для установки конфигурации окружения
 @config_bp.route('/config/ambience', methods=['POST'])
 def set_ambience_config():
+    init_config = load_config("init")
+    if init_config is None:
+        return jsonify({"error": "init.json not found"}), 404
+
     data = request.get_json()
-
-    try:
-        # Открываем файл конфигурации карты
-        config_path = get_config_path()
-        with open(f"{config_path}/init.json", 'r') as f:
-            init_config = json.load(f)
-        map_name = init_config['map'];
-        with open(f"{config_path}/{map_name}.json", 'r') as f:
-            map_config = json.load(f)
-
-        map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
-
-        try:
-            with open(f"{config_path}/{map_name}.json", 'w') as f:
-                json.dump(map_config, f, indent=4)
-        except IOError:
-            return jsonify({"error": f"Error saving updated configuration to '{config_path}/{map_name}'"}), 500
-
-        return jsonify(map_config)
-    except FileNotFoundError:
+    ambience = data.get('ambience')
+    map_name = init_config.get("map")
+    map_config = load_config(map_name)
+    if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
+    # Обновляем временную метку
+    map_config['ambience'] = ambience
+    map_config['lastUpdated'] = int(time.time())
 
+    if not save_config(map_name, map_config):
+        return jsonify({"error": f"Error saving updated configuration to '{map_name}.json'"}), 500
+
+    return jsonify(map_config)
+
+# Маршрут для установки начальной конфигурации
 @config_bp.route('/config/init', methods=['POST'])
-def set_init_config():
+def update_init_config():
     data = request.get_json()
+    init_config = load_config("init")
+    if init_config is None:
+        return jsonify({"error": "init.json not found"}), 404
 
-
-    round = data.get('round')
-    _try = data.get('try')
-    all = data.get('all')
-    try:
-        # Открываем файл конфигурации карты
-        config_path = get_config_path()
-        with open(f"{config_path}/init.json", 'r') as f:
-            init_config = json.load(f)
-        map_name = init_config['map'];
-        with open(f"{config_path}/{map_name}.json", 'r') as f:
-            map_config = json.load(f)
-
-        map_config['init'] = {
-            'round':round,
-            'try':_try,
-            'all':all,
-        }
-
-        map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
-
-        try:
-            with open(f"{config_path}/{map_name}.json", 'w') as f:
-                json.dump(map_config, f, indent=4)
-        except IOError:
-            return jsonify({"error": f"Error saving updated configuration to '{config_path}/{map_name}'"}), 500
-
-        return jsonify(map_config)
-    except FileNotFoundError:
+    map_name = init_config.get("map")
+    map_config = load_config(map_name)
+    if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
+    # Обновляем начальные параметры конфигурации
+    map_config['init'] = {
+        'round': data.get('round'),
+        'try': data.get('try'),
+        'all': data.get('all'),
+    }
+    map_config['lastUpdated'] = int(time.time())
 
+    if not save_config(map_name, map_config):
+        return jsonify({"error": f"Error saving updated configuration to '{map_name}.json'"}), 500
+
+    return jsonify(map_config)
+
+# Маршрут для получения начальной конфигурации init
 @config_bp.route('/config/init', methods=['GET'])
-def set_init_config():
+def get_init_map_config():
+    init_config = load_config("init")
+    if init_config is None:
+        return jsonify({"error": "init.json not found"}), 404
 
-    try:
-        # Открываем файл конфигурации карты
-        config_path = get_config_path()
-        with open(f"{config_path}/init.json", 'r') as f:
-            init_config = json.load(f)
-        map_name = init_config['map'];
-        with open(f"{config_path}/{map_name}.json", 'r') as f:
-            map_config = json.load(f)
-
-        return jsonify(map_config.init)
-    except FileNotFoundError:
+    map_name = init_config.get("map")
+    map_config = load_config(map_name)
+    if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
+
+    return jsonify(map_config.get('init', {}))
