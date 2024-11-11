@@ -7,7 +7,7 @@ let polygonMarkers = [];  // Маркеры для точек полигона
 let markerCount = 0;  // Счётчик маркеров
 let drawingMode = false;  // Режим рисования
 let lastUpdated = 0;  // Переменная для хранения последней временной метки
-
+let admin_mode = window.admin_mode || false;
 // Функция для получения начальной конфигурации
 async function getInit() {
   const response = await fetch('/api/config');
@@ -47,7 +47,7 @@ async function initMap() {
   setMapEventHandlers();  // Обработчики событий для карты
 
   // Запускаем периодическую проверку на изменения конфигурации
-  setInterval(checkForConfigUpdates, 1000);  // Проверка каждые 10 секунд
+  if (!admin_mode) setInterval(checkForConfigUpdates, 1000);  // Проверка каждые 10 секунд
 }
 
 // Функция для инициализации карты
@@ -139,6 +139,9 @@ function createPolygonClickHandler(polygonLayer) {
 
 // Функция для отправки данных о полигонах на сервер
 function sendPolygonsData() {
+
+  if (!admin_mode) return;
+
   const polygonsData = polygons.map(polygon => ({
     points: polygon.points,
     isVisible: polygon.layer.isVisible
@@ -172,6 +175,7 @@ function sendPolygonsData() {
 // Функция для настройки кнопки рисования
 function setDrawButtonHandler() {
   const drawButton = document.getElementById('draw-button');
+  if (!drawButton) return;
   drawButton.addEventListener('click', () => {
     drawingMode = !drawingMode;
     drawButton.textContent = drawingMode ? "Finish Drawing" : "Draw Polygon";
@@ -194,8 +198,10 @@ function setDrawButtonHandler() {
 // Функция для настройки кнопки reverse
 function setReverseButtonHandler(config) {
   const reverseButton = document.getElementById('reverse-button');
+  if (!reverseButton) return;
   reverseButton.addEventListener('click', () => {
     if (mainPolygon) {
+      updateMainPoligon(config)
       toggleMainPolygonVisibility();
     } else {
       createMainPolygon(config);
@@ -259,6 +265,15 @@ function createMainPolygon(config) {
     weight: 3
   }).addTo(map);
 }
+
+function updateMainPoligon(config){
+    let holes = [];
+  config.polygons.forEach(polygonData => {
+    holes.push(polygonData.points);
+  });
+  mainPolygon.setLatLngs([mainPolygon.getLatLngs()[0], holes]);
+}
+
 // Функция для проверки обновлений конфигурации
 async function checkForConfigUpdates() {
   const config = await getConfig(mapName);
