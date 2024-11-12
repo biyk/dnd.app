@@ -87,8 +87,11 @@ def update_init_config():
         'round': data.get('round'),
         'try': data.get('try'),
         'all': data.get('all'),
+        'rating': data.get('rating'),
+        'next': data.get('next'),
     }
     map_config['lastUpdated'] = int(time.time())
+    map_config['timer'] = int(time.time() + 60)
 
     if not save_config(map_name, map_config):
         return jsonify({"error": f"Error saving updated configuration to '{map_name}.json'"}), 500

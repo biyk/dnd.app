@@ -68,9 +68,10 @@ function initializeMap(config) {
   const north = 85.05;
   const south = (360 / Math.PI) * (Math.atan(Math.exp(ry / radius)) - (Math.PI / 4));
   const bounds = [[south, west], [north, east]];
+  let zoomControl = admin_mode;
 
   // Инициализация карты
-  map = L.map('map', { maxBounds: bounds });
+  map = L.map('map', { maxBounds: bounds,zoomControl });
   L.tileLayer(image + '/{z}-{x}-{y}.jpg', {
     maxZoom: maxLevel,
     minZoom: minLevel,
@@ -292,6 +293,8 @@ async function checkForConfigUpdates() {
     lastUpdated = config.lastUpdated;  // Обновляем временную метку
     createPolygons(config);  // Обновляем полигоны
     setAudio(config)
+    startCountdown(config.timer);
+
     map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);  // Обновляем центр и зум карты
     console.log("Map data updated due to configuration change.");
   }

@@ -1,8 +1,9 @@
 
-      let currentCharacterIndex = 0;
-let currentRound = 1;
+let currentCharacterIndex = 0;
+let currentRound = 0;
 let charactersData = []; // Хранение загруженных данных о персонажах
 let rating = 0; //Рейтинг опасности
+let nextCharacterIndex = 0; //Рейтинг опасности
 
 // Функция для загрузки данных из JSON-файла
 function loadInitiativeData() {
@@ -26,11 +27,11 @@ function sendInit() {
     const dataToSend = {
         round: currentRound,
         try: currentCharacterIndex,
-        all: charactersData
+        all: charactersData,
+        rating: rating,
+        next: nextCharacterIndex,
     };
-    console.log(
-        calculateEncounterData(charactersData)
-    )
+
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/config/init", true);
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
@@ -90,10 +91,10 @@ function displayCurrentAndNextTurn() {
 
     const currentCharacter = characters.find(character => parseFloat(character.init) == currentCharacterIndex);
     const nextCharacter = characters.find(character => parseFloat(character.init) < currentCharacterIndex) || characters[0];
-
+    nextCharacterIndex = nextCharacter.init
     document.getElementById('current-round').textContent = currentRound;
-    document.getElementById('current-turn').textContent = currentCharacter.name;
-    document.getElementById('next-turn').textContent = nextCharacter.name;
+    if (currentCharacter) document.getElementById('current-turn').textContent = currentCharacter.name;
+    if (nextCharacter) document.getElementById('next-turn').textContent = nextCharacter.name;
 }
 
 // Модифицированная функция для отображения строк персонажей с подсветкой текущего
@@ -116,6 +117,8 @@ function displayCharacters() {
 
         if (character.npc==='true') {
             row.classList.add('character-npc');
+        } else {
+            row.classList.add('character-player');
         }
 
         row.innerHTML = `
@@ -137,8 +140,27 @@ function displayCharacters() {
 
 // Функция обновления инициативы персонажа
 function updateCharacterInit(index, value) {
-    charactersData[index].init = value;
+    // Преобразуем введенное значение в число с плавающей точкой
+    let init = parseFloat(value);
+
+    // Проверяем, что значение является числом; если нет, выходим из функции
+    if (isNaN(init)) {
+        console.error("Инициатива должна быть числом");
+        return;
+    }
+
+    // Проверяем уникальность инициативы и увеличиваем на 0.01, если такое значение уже существует
+    while (!isUniqueInitiative(init, charactersData)) {
+        init = parseFloat((init + 0.1).toFixed(2)); // Округляем до 2 знаков после увеличения
+    }
+
+    // Обновляем инициативу в данных персонажей
+    charactersData[index].init = init;
+
+    // Обновляем отображение данных
     displayCharacters();
+
+    // Отправляем данные на сервер
     sendInit(); // Отправка данных на сервер при обновлении инициативы
 }
 
@@ -162,13 +184,19 @@ function updateCharacterExp(index, value) {
 
 // Функция сброса инициативы
 function resetInitiative() {
-    charactersData.forEach((character) => {
-        character.init = '';
+    // Сбрасываем инициативу всех персонажей в пустую строку
+    charactersData.forEach((character, index) => {
+        charactersData[index].init = '';  // Инициатива становится пустой строкой
     });
-    currentCharacterIndex = 99;
+
+    // Сбрасываем раунд на 0
     currentRound = 0;
+
+    // Обновляем отображение данных
     displayCharacters();
-    sendInit(); // Отправка данных на сервер после сброса инициативы
+
+    // Отправляем обновленные данные на сервер
+    sendInit();
 }
 
 // Функция восстановления здоровья
@@ -209,7 +237,7 @@ function addCharacter() {
 
     // Проверяем уникальность инициативы
     while (!isUniqueInitiative(init, charactersData)) {
-        init = (parseFloat(init) + 0.01).toFixed(2); // Увеличиваем инициативу на 0,01 и округляем до 2 знаков
+        init = (parseFloat(init) + 0.1).toFixed(2); // Увеличиваем инициативу на 0,01 и округляем до 2 знаков
     }
 
     const newCharacter = {

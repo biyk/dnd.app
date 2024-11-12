@@ -34,164 +34,183 @@ body, html, #map {
 }
 
     /* Стили для панели вкладок */
-    .tab-buttons {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      background-color: rgba(0, 0, 0, 0.7);
-      padding: 8px 15px;
-      border-radius: 8px;
-      z-index: 1000;
-    }
+.tab-buttons {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 8px 15px;
+  border-radius: 8px;
+  z-index: 1000;
+}
 
-    .tab-button {
-      padding: 8px 12px;
-      cursor: pointer;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      transition: background-color 0.2s;
-    }
+.tab-button {
+  padding: 8px 12px;
+  cursor: pointer;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  transition: background-color 0.2s;
+}
 
-    .tab-button.active {
-      background-color: #555;
-    }
+.tab-button.active {
+  background-color: #555;
+}
 
-    /* Основные стили для скрытия и отображения вкладок */
-    .tab-content {
-      display: none; /* Все вкладки скрыты по умолчанию */
-    }
+/* Основные стили для скрытия и отображения вкладок */
+.tab-content {
+  display: none; /* Все вкладки скрыты по умолчанию */
+}
 
-    .tab-content.active {
-      display: block; /* Отображение активной вкладки */
-    }
-
-
-    /* Стили для других вкладок */
-    #ambience-tab, #initiative-tab {
-      padding: 20px;
-      color: #222;
-    }
+.tab-content.active {
+  display: block; /* Отображение активной вкладки */
+}
 
 
-    /*инициатива*/
+/* Стили для других вкладок */
+#ambience-tab, #initiative-tab {
+  padding: 20px;
+  color: #222;
+}
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            width: 100%;
-            margin: 20px;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .info-block, .character-row {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .info-block {
-            background-color: #e0e7ff;
-            color: #2c3e50;
-        }
-        .info-block span {
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .character-row {
-            background-color: #f0f4fc;
-            border: 1px solid #cce;
-        }
-        .character-row input[type="text"] {
-            width: 50px;
-            padding: 3px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-        .character-row label {
-            margin-left: 5px;
-            color: #666;
-            font-size: 14px;
-        }
-        .character-row input[type="checkbox"] {
-            margin-left: 5px;
-        }
-        .character-row button {
-            background-color: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .character-row button:hover {
-            background-color: #ff4c4c;
-        }
-        .character-row span {
-            margin-right: 10px;
-            font-size: 14px;
-        }
-        .add-character-form {
-            display: none;
-            background-color: #e0f7fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-        }
-        .add-character-form input, .add-character-form label {
-            margin-right: 10px;
-        }
-        .add-character-form button {
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .add-character-form button:hover {
-            background-color: #45a049;
-        }
-        .toggle-form-button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 15px;
-            display: block;
-            width: 100%;
-            text-align: center;
-        }
-        .toggle-form-button:hover {
-            background-color: #0056b3;
-        }
-        .character-row.current-turn {
-            background-color: #ffd700;
-            font-weight: bold;
-        }
 
-        .character-npc {
-            background-color: lightcoral;
-        }
+/*инициатива*/
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    width: 100%;
+    margin: 20px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.info-block, .character-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+}
+.info-block {
+    background-color: #e0e7ff;
+    color: #2c3e50;
+}
+.info-block span {
+    font-weight: bold;
+    font-size: 16px;
+}
+.character-row {
+    background-color: #f0f4fc;
+    border: 1px solid #cce;
+}
+.character-row input[type="text"] {
+    width: 50px;
+    padding: 3px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+.character-row label {
+    margin-left: 5px;
+    color: #666;
+    font-size: 14px;
+}
+.character-row input[type="checkbox"] {
+    margin-left: 5px;
+}
+.character-row button {
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.character-row button:hover {
+    background-color: #ff4c4c;
+}
+.character-row span {
+    margin-right: 10px;
+    font-size: 14px;
+}
+.add-character-form {
+    display: none;
+    background-color: #e0f7fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+.add-character-form input, .add-character-form label {
+    margin-right: 10px;
+}
+.add-character-form button {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.add-character-form button:hover {
+    background-color: #45a049;
+}
+.toggle-form-button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: inline-block;
+    width: 33%;
+    text-align: center;
+}
+.toggle-form-button:hover {
+    background-color: #0056b3;
+}
+.character-row.current-turn {
+    background-color: #ffd700;
+}
+
+/*.character-npc {*/
+/*    background-color: lightcoral;*/
+/*}*/
+
+.character-player {
+    background-color: white;
+}
+
+.timer-container {
+        margin: auto;
+    width: 200px;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    z-index: 99999;
+}
+
+.timer-text {
+    top: 25px;
+    position: absolute;
+    left: 25px;
+    color: blue;
+    font-weight: 900;
+}
