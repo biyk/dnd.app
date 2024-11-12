@@ -47,8 +47,15 @@ function displayInfoBlocks(data) {
 // Переход к следующему персонажу
 function nextTurn() {
     // Упорядочиваем персонажей по инициативе (по убыванию)
-    const characters = charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
-    let next = charactersData.filter(character => parseFloat(character.init) < currentCharacterIndex)[0] || characters[0];
+    let characters = charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+    let _characters = characters
+
+    if (currentRound === 0) {
+        // Если раунд сюрприз, фильтруем только персонажей с `surprise: true`
+        characters = characters.filter(character => character.surprise === "true");
+    }
+
+    let next = characters.filter(character => parseFloat(character.init) < currentCharacterIndex)[0] || _characters[0];
 
     // Если возвращаемся к первому персонажу, увеличиваем счетчик раунда
     currentCharacterIndex = next.init;
@@ -65,7 +72,12 @@ function nextTurn() {
 // Переход к предыдущему персонажу
 function prevTurn() {
     // Упорядочиваем персонажей по инициативе (по убыванию)
-    const characters = charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+    let characters = charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+
+    if (currentRound === 0) {
+        // Если раунд сюрприз, фильтруем только персонажей с `surprise: true`
+        characters = characters.filter(character => character.surprise === "true");
+    }
 
     // Находим текущего персонажа и предыдущего по инициативе
     let currentIndex = characters.findIndex(character => parseFloat(character.init) === parseFloat(currentCharacterIndex));
@@ -73,7 +85,7 @@ function prevTurn() {
     // Если текущий персонаж первый, нужно вернуться к последнему персонажу и уменьшить раунд
     if (currentIndex === 0) {
         currentCharacterIndex = characters[characters.length - 1].init;
-        currentRound = Math.max(1, currentRound - 1); // Уменьшаем раунд, но не меньше 1
+        currentRound = Math.max(0, currentRound - 1); // Уменьшаем раунд, но не меньше 0
     } else {
         // В противном случае, переходим к предыдущему персонажу
         currentCharacterIndex = characters[currentIndex - 1].init;
@@ -98,13 +110,13 @@ function displayCurrentAndNextTurn() {
 }
 
 // Модифицированная функция для отображения строк персонажей с подсветкой текущего
-// Модифицированная функция для отображения строк персонажей с учетом НПС
 function displayCharacters() {
     const container = document.getElementById('characters-container');
     container.innerHTML = '';
 
     let {encounterDifficulty} = calculateEncounterData(charactersData);
     document.getElementById('battle-rating').textContent = encounterDifficulty;
+    rating = encounterDifficulty;
     const characters = charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
 
     characters.forEach((character, index) => {
@@ -126,7 +138,7 @@ function displayCharacters() {
             <span>Имя: ${character.name}</span>
             <span>КД: ${character.cd}</span>
             <span>HP: <span class="hp-now"><input type="text" value="${character.hp_now}" onchange="updateCharacterHp(${index}, this.value)" /></span> / ${character.hp_max}</span>
-            <label>Sur: <input type="checkbox" ${character.surprise === "true" ? "checked" : ""} /></label>
+            <label>Sur: <input type="checkbox" ${character.surprise === "true" ? "checked" : ""}  onchange="updateCharacterSur(${index}, this.checked)"/></label>
             <label>НПС: <input type="checkbox" ${character.npc === "true" ? "checked" : ""} onchange="updateCharacterNpc(${index}, this.checked)" /></label>
             <span>EXP: <input type="number" value="${character.exp}" onchange="updateCharacterExp(${index}, this.value)" /></span>
             <button onclick="deleteCharacter(${index})">-</button>
@@ -169,6 +181,12 @@ function updateCharacterHp(index, value) {
     charactersData[index].hp_now = value;
     displayCharacters();
     sendInit(); // Отправка данных на сервер при обновлении здоровья
+}
+
+function updateCharacterSur(index, isChecked) {
+    charactersData[index].surprise = isChecked ? "true" : "false"; // Устанавливаем значение "true" или "false" в зависимости от состояния чекбокса
+    displayCharacters();
+    sendInit(); // Отправка данных на сервер при обновлении признака НПС
 }
 
 function updateCharacterNpc(index, isChecked) {

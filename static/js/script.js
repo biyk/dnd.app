@@ -294,7 +294,7 @@ async function checkForConfigUpdates() {
     createPolygons(config);  // Обновляем полигоны
     setAudio(config)
     startCountdown(config.timer);
-
+    updateSkullColor(config.init.rating);
     map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);  // Обновляем центр и зум карты
     console.log("Map data updated due to configuration change.");
   }

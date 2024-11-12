@@ -214,3 +214,13 @@ body {
     color: blue;
     font-weight: 900;
 }
+
+#skull {
+position: absolute;
+    font-size: 70px;
+    color: green;
+    transition: color 0.5s ease;
+    top: -20px;
+    right: 0px;
+    z-index: 999;
+}

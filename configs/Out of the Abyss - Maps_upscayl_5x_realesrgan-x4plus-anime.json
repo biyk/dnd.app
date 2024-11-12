@@ -6379,59 +6379,38 @@
             ]
         ]
     },
-    "lastUpdated": 1731412942,
+    "lastUpdated": 1731428150,
     "ambience": "0fICWTcQEnk",
     "init": {
-        "round": 1,
-        "try": 20,
+        "round": 0,
+        "try": 1,
         "all": [
-            {
-                "cd": "16",
-                "exp": "5",
-                "hp_max": "17",
-                "hp_now": "17",
-                "init": 20,
-                "name": "\u042e\u0438\u0442\u0438\u0440\u043e",
-                "npc": "false",
-                "player": "false",
-                "surprise": "false"
-            },
-            {
-                "cd": "13",
-                "exp": "3",
-                "hp_max": "33",
-                "hp_now": "33",
-                "init": 19,
-                "name": "\u0418\u043a\u0441\u0430\u0441",
-                "player": "false",
-                "surprise": "false"
-            },
             {
                 "cd": "12",
                 "exp": "0",
                 "hp_max": "12",
                 "hp_now": "12",
-                "init": "",
+                "init": 7,
                 "name": "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u043b\u043e\u0433\u043e\u0432\u0430",
                 "npc": "true",
-                "surprise": "false"
+                "surprise": "true"
             },
             {
                 "cd": "13",
                 "exp": "3",
                 "hp_max": "15",
                 "hp_now": "15",
-                "init": "",
+                "init": 6,
                 "name": "\u043c\u044d\u0439 \u043c\u044d\u0439",
                 "player": "false",
                 "surprise": "false"
             },
             {
                 "cd": "17",
-                "exp": "2",
+                "exp": "10",
                 "hp_max": "58",
                 "hp_now": "58",
-                "init": "",
+                "init": 5,
                 "name": "\u043a\u0430\u043f\u0438\u0442\u0430\u043d",
                 "npc": "true",
                 "player": "false",
@@ -6442,17 +6421,17 @@
                 "exp": "3",
                 "hp_max": "17",
                 "hp_now": "11",
-                "init": "",
+                "init": 4,
                 "name": "\u0411\u043e\u0440\u0438\u0441",
                 "player": "false",
-                "surprise": "false"
+                "surprise": "true"
             },
             {
                 "cd": "12",
                 "exp": "1",
                 "hp_max": "12",
                 "hp_now": "12",
-                "init": "",
+                "init": 3,
                 "name": "12",
                 "npc": "true",
                 "surprise": "false"
@@ -6462,23 +6441,46 @@
                 "exp": "3",
                 "hp_max": "10",
                 "hp_now": "9",
-                "init": "",
+                "init": 2.1,
                 "name": "\u043c\u0443\u0440\u043c\u0443\u0440",
                 "player": "false",
                 "surprise": "false"
+            },
+            {
+                "cd": "13",
+                "exp": "3",
+                "hp_max": "33",
+                "hp_now": "33",
+                "init": 2,
+                "name": "\u0418\u043a\u0441\u0430\u0441",
+                "player": "false",
+                "surprise": "true"
             },
             {
                 "cd": "14",
                 "exp": "0",
                 "hp_max": "10",
                 "hp_now": "10",
-                "init": "",
+                "init": 1.1,
                 "name": "\u043a\u043e\u043d\u0435\u0446 \u0440\u0430\u0443\u043d\u0434\u0430",
                 "npc": "true",
                 "player": "false",
-                "surprise": "false"
+                "surprise": "true"
+            },
+            {
+                "cd": "16",
+                "exp": "1",
+                "hp_max": "17",
+                "hp_now": "17",
+                "init": 1,
+                "name": "\u042e\u0438\u0442\u0438\u0440\u043e",
+                "npc": "false",
+                "player": "false",
+                "surprise": "true"
             }
-        ]
+        ],
+        "rating": 3,
+        "next": 7
     },
-    "timer": 1731411852
+    "timer": 1731428210
 }
