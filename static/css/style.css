@@ -180,7 +180,7 @@ body {
     cursor: pointer;
     transition: background-color 0.2s;
     display: inline-block;
-    width: 33%;
+    width: 20%;
     text-align: center;
 }
 .toggle-form-button:hover {

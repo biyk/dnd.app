@@ -127,26 +127,116 @@ function displayCharacters() {
             row.classList.add('current-turn');
         }
 
-        if (character.npc==='true') {
+        if (character.npc === 'true') {
             row.classList.add('character-npc');
         } else {
             row.classList.add('character-player');
         }
 
-        row.innerHTML = `
-            <span>Init: <input type="text" value="${character.init}" onchange="updateCharacterInit(${index}, this.value)" /></span>
-            <span>Имя: ${character.name}</span>
-            <span>КД: ${character.cd}</span>
-            <span>HP: <span class="hp-now"><input type="text" value="${character.hp_now}" onchange="updateCharacterHp(${index}, this.value)" /></span> / ${character.hp_max}</span>
-            <label>Sur: <input type="checkbox" ${character.surprise === "true" ? "checked" : ""}  onchange="updateCharacterSur(${index}, this.checked)"/></label>
-            <label>НПС: <input type="checkbox" ${character.npc === "true" ? "checked" : ""} onchange="updateCharacterNpc(${index}, this.checked)" /></label>
-            <span>EXP: <input type="number" value="${character.exp}" onchange="updateCharacterExp(${index}, this.value)" /></span>
-            <button onclick="deleteCharacter(${index})">-</button>
-            <button onclick="healCharacter(${index})">+</button>
-        `;
+        // Поле инициативы с вызовом window.prompt при клике
+        const initSpan = document.createElement('span');
+        initSpan.textContent = `Init: ${character.init}`;
+        initSpan.onclick = () => {
+            const newValue = window.prompt("Введите новое значение инициативы:", character.init);
+            if (newValue !== null && !isNaN(newValue)) {
+                updateCharacterInit(index, newValue);
+            }
+        };
+
+        // Поле имени
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `Имя: ${character.name}`;
+        nameSpan.style.width = '15%'
+        nameSpan.onclick = () => {
+            const newValue = window.prompt("Введите новое имя:", character.name);
+            if (newValue !== null) {
+                character.name = newValue;
+                displayCharacters();
+                sendInit();
+            }
+        };
+
+        // Поле КД (не редактируемое)
+        const cdSpan = document.createElement('span');
+        cdSpan.textContent = `КД: ${character.cd}`;
+        cdSpan.onclick = () => {
+            const newValue = window.prompt("Введите новое значение КД:", character.cd);
+            if (newValue !== null && !isNaN(newValue)) {
+                updateCharacterCd(index, newValue);
+            }
+        };
+
+        // Поле текущего HP с вызовом window.prompt при клике
+        const hpSpan = document.createElement('span');
+        hpSpan.innerHTML = `HP: <span class="hp-now">${character.hp_now}</span> / ${character.hp_max}`;
+        hpSpan.onclick = () => {
+            const newValue = window.prompt("Введите новое значение текущего HP:", character.hp_now);
+            if (newValue !== null && !isNaN(newValue)) {
+                updateCharacterHp(index, newValue);
+            }
+        };
+
+        // Поле сюрприза (чекбокс)
+        const surpriseLabel = document.createElement('label');
+        surpriseLabel.innerHTML = `Sur: <input type="checkbox" ${character.surprise === "true" ? "checked" : ""} onchange="updateCharacterSur(${index}, this.checked)" />`;
+
+        // Поле НПС (чекбокс)
+        const npcLabel = document.createElement('label');
+        npcLabel.innerHTML = `НПС: <input type="checkbox" ${character.npc === "true" ? "checked" : ""} onchange="updateCharacterNpc(${index}, this.checked)" />`;
+
+        // Поле опыта с вызовом window.prompt при клике
+        const expSpan = document.createElement('span');
+        expSpanTitle = character.npc ? 'EXP' : 'LVL';
+        expSpan.innerHTML = `${expSpanTitle}: ${character.exp}`;
+        expSpan.onclick = () => {
+            const newValue = window.prompt("Введите новое значение опыта:", character.exp);
+            if (newValue !== null && !isNaN(newValue)) {
+                updateCharacterExp(index, newValue);
+            }
+        };
+
+        // Кнопки удаления и восстановления здоровья
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '-';
+        deleteButton.onclick = () => deleteCharacter(index);
+
+        const healButton = document.createElement('button');
+        healButton.textContent = '+';
+        healButton.onclick = () => healCharacter(index);
+
+        // Добавляем все элементы в строку
+        row.appendChild(nameSpan);
+        row.appendChild(initSpan);
+        row.appendChild(cdSpan);
+        row.appendChild(hpSpan);
+        row.appendChild(surpriseLabel);
+        row.appendChild(npcLabel);
+        row.appendChild(expSpan);
+        row.appendChild(deleteButton);
+        row.appendChild(healButton);
+
         container.appendChild(row);
     });
+
     displayCurrentAndNextTurn();
+}
+
+// Функция для редактирования имени персонажа
+function editCharacterName(index) {
+    const currentName = charactersData[index].name;
+    const newName = window.prompt("Введите новое имя:", currentName);
+    if (newName !== null) {
+        charactersData[index].name = newName;
+        displayCharacters();
+        sendInit(); // Отправка данных на сервер после изменения имени
+    }
+}
+
+// Функция для редактирования КД персонажа
+function updateCharacterCd(index, newCd) {
+    charactersData[index].cd = newCd;
+    displayCharacters();
+    sendInit(); // Если нужно отправить данные на сервер
 }
 
 

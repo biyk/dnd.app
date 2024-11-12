@@ -111,3 +111,43 @@ def get_init_map_config():
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
     return jsonify(map_config.get('init', {}))
+
+
+@config_bp.route('/config/dm', methods=['POST'])
+def post_dm_config():
+    try:
+        # Получаем данные из запроса
+        data = request.get_json()
+        text = data.get('text', '')
+
+        # Разбиваем текст на строки
+        lines = text.splitlines()
+
+        # Сохраняем данные в файл
+        if not save_config('text', lines):
+            return jsonify({"error": "Error saving updated configuration to 'text.json'"}), 500
+
+        return jsonify('lines')
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+
+@config_bp.route('/config/dm', methods=['GET'])
+def get_dm_config():
+    # Загружаем данные из файла (если файл существует)
+    try:
+        # Печатаем путь к файлу для отладки
+        config_path = get_config_path()
+        print(f"Attempting to load file from: {os.path.join(config_path, 'text.json')}")
+
+        text = load_config("text")
+        if text is None:
+            return jsonify({"error": "text.json not found"}), 404
+
+        return jsonify(text)  # Возвращаем массив строк
+
+    except Exception as e:
+        # Печатаем ошибку, если что-то пошло не так
+        print(f"Error loading config: {e}")
+        return jsonify({"error": "Error loading configuration"}), 500
