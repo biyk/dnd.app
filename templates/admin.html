@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <title>Out of the Abyss - Map with Drawing Tools</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script>window.admin_mode=1</script>
+</head>
+<body>
+
+<!-- Панель навигации по вкладкам -->
+<div class="tab-buttons">
+  <button class="tab-button active" onclick="showTab('map')">Карта</button>
+  <button class="tab-button" onclick="showTab('ambience-tab')">Амбиенс</button>
+  <button class="tab-button" onclick="showTab('initiative-tab')">Инициатива</button>
+  <button class="tab-button" onclick="showTab('dm-tab')">Для заметок</button>
+</div>
+
+<!-- Контейнеры для содержимого каждой вкладки -->
+<div id="map" class="tab-content active">
+    <!-- Кнопки для карты -->
+<div id="map-controls">
+  <button id="draw-button">Draw Polygon</button>
+  <button id="reverse-button">Reverse Button</button>
+</div>
+</div>
+<div id="ambience-tab" class="tab-content">
+  <h2>Амбиенс</h2>
+  <p>Здесь можно настроить амбиенс, выбрать звуковое сопровождение и эффекты для карты.</p>
+  <div id="ambience-tab-content"></div>
+      <style>
+        /* Скрываем оригинальные радио-кнопки */
+        input[type="radio"][name="ambience"] {
+            display: none;
+        }
+
+        /* Стиль для меток, чтобы выглядели как кнопки */
+        #ambience-tab label {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        /* Стиль для меток при наведении */
+        #ambience-tab label:hover {
+            background-color: #e0e0e0;
+            border-color: #bbb;
+        }
+
+        /* Стиль для выбранной кнопки */
+        input[type="radio"]:checked + label {
+            background-color: #4caf50;
+            color: #4caf50;
+            border-color: #4caf50;
+        }
+    </style>
+ <script>
+        // Функция для загрузки радиобаттонов и отправки данных на сервер
+        async function loadAmbienceRadios() {
+            try {
+                const response = await fetch('/static/audio/ambience.json');
+                const data = await response.json();
+
+                const container = document.getElementById('ambience-tab');
+
+                Object.entries(data).forEach(([key, value]) => {
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'ambience';
+                    radio.value = key;
+                    radio.id = `radio-${key}`;
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `radio-${key}`;
+                    label.textContent = value;
+
+                    // Добавляем радио-кнопку и метку в контейнер
+                    container.appendChild(radio);
+                    container.appendChild(label);
+
+                    // Добавляем обработчик для отправки значения на сервер при выборе радио-кнопки
+                    radio.addEventListener('change', async () => {
+                        try {
+                            await fetch('/api/config/ambience', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ ambience: radio.value })
+                            });
+                            console.log(`Отправлено значение: ${radio.value}`);
+                        } catch (error) {
+                            console.error('Ошибка при отправке:', error);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+            }
+        }
+
+        loadAmbienceRadios();
+    </script>
+</div>
+<div id="initiative-tab" class="tab-content">
+  <h2>Инициатива</h2>
+  <p>Таблица инициативы для отслеживания очереди ходов персонажей.</p>
+    <div class="container">
+    <!-- Информационные блоки -->
+    <div class="info-block">
+        <span>Текущий раунд: <span id="current-round"></span></span>
+        <span>Ходит: <span id="current-turn"></span></span>
+        <span>Далее: <span id="next-turn"></span></span>
+        <span>Сложность боя: <span id="battle-rating"></span></span>
+    </div>
+          <button class="toggle-form-button" onclick="resetInitiative()">Сброс</button>
+    <button class="toggle-form-button" onclick="nextTurn()">Дальше</button>
+    <button class="toggle-form-button" onclick="prevTurn()">Назад</button>
+
+    <!-- Контейнер для персонажей -->
+    <div id="characters-container"></div>
+
+    <!-- Кнопка открытия формы добавления персонажа -->
+    <button class="toggle-form-button" onclick="toggleAddCharacterForm()">Добавить персонажа</button>
+    </div>
+    <!-- Форма добавления нового персонажа -->
+    <div class="add-character-form" id="add-character-form">
+        <label>Init: <input type="text" id="new-init"></label>
+        <label>Имя: <input type="text" id="new-name"></label>
+        <label>КД: <input type="text" id="new-cd"></label>
+        <label>HP: <input type="text" id="new-hp-now"> / <input type="text" id="new-hp-max"></label>
+        <label>SUR: <input type="checkbox" id="new-surprise"></label>
+        <label>НПС: <input type="checkbox" id="new-npc" /></label>
+        <label>Опыт: <input type="text" id="new-experience" /></label>
+        <button onclick="addCharacter()">Добавить</button>
+
+
+    </div>
+
+</div>
+<div id="dm-tab" class="tab-content">
+  <h2>Заметки</h2>
+    <textarea  id="dynamic-text" style="width: 800px;height:50%"></textarea>
+</div>
+
+<script src="https://unpkg.com/@turf/turf"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}" async defer></script>
+<script src="{{ url_for('static', filename='js/tabs.js') }}" async defer></script>
+<script src="{{ url_for('static', filename='js/init.js') }}" async defer></script>
+<script src="{{ url_for('static', filename='js/textarea.js') }}" async defer></script>
+
+</body>
+</html>
