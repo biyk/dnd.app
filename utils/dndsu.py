@@ -48,7 +48,7 @@ def migrate_database():
                 url TEXT UNIQUE,
                 armor_class INTEGER,
                 hit_points INTEGER,
-                hit_dice INTEGER,
+                hit_dice TEXT,
                 challenge_rating REAL,
                 experience INTEGER
             )
@@ -62,7 +62,7 @@ def migrate_database():
                 url,
                 CASE WHEN armor_class GLOB '*[0-9]*' THEN CAST(armor_class AS INTEGER) ELSE 0 END,
                 CASE WHEN hit_points GLOB '*[0-9]*' THEN CAST(hit_points AS INTEGER) ELSE 0 END,
-                CASE WHEN hit_dice GLOB '*[0-9]*' THEN CAST(hit_dice AS INTEGER) ELSE 0 END,
+                CASE WHEN hit_dice GLOB '*[0-9]*' THEN CAST(hit_dice AS TEXT) ELSE 0 END,
                 CASE 
                     WHEN challenge_rating LIKE '1/2' THEN 0.5
                     WHEN challenge_rating LIKE '1/4' THEN 0.25
@@ -99,7 +99,7 @@ def setup_database():
             url TEXT UNIQUE,
             armor_class INTEGER,
             hit_points INTEGER,
-            hit_dice INTEGER,
+            hit_dice TEXT,
             challenge_rating REAL,
             experience INTEGER
         )
@@ -131,7 +131,7 @@ def save_or_update_monster(monster_data):
             monster_data['name'],
             monster_data.get('armor_class', 0),
             monster_data.get('hit_points', 0),
-            monster_data.get('hit_dice', 0),
+            monster_data.get('hit_dice', ''),
             monster_data.get('challenge_rating', 0.0),
             monster_data.get('experience', 0),
             monster_data['url']
@@ -147,7 +147,7 @@ def save_or_update_monster(monster_data):
             monster_data['url'],
             monster_data.get('armor_class', 0),
             monster_data.get('hit_points', 0),
-            monster_data.get('hit_dice', 0),
+            monster_data.get('hit_dice', ''),
             monster_data.get('challenge_rating', 0.0),
             monster_data.get('experience', 0)
         ))
@@ -245,9 +245,9 @@ def parse_monster_info(url):
 
     try:
         # Класс Доспеха
-        ac_element = soup.find('strong', text="Класс Доспеха")
+        ac_element = soup.find('strong', string="Класс Доспеха")
         if ac_element:
-            ac_text = ac_element.find_next_sibling(text=True).strip()
+            ac_text = ac_element.find_next_sibling(string=True).strip()
             armor_class = re.search(r'\d+', ac_text)
             monster_data['armor_class'] = int(armor_class.group(0)) if armor_class else 0
             logger.info(f"Класс Доспеха: {monster_data['armor_class']}")
@@ -256,24 +256,24 @@ def parse_monster_info(url):
             logger.warning(f"Класс Доспеха не найден на странице {full_url}")
 
         # Хиты
-        hp_element = soup.find('strong', text="Хиты")
+        hp_element = soup.find('strong', string="Хиты")
         if hp_element:
             hp_text = hp_element.find_next_sibling('span', {'data-type': 'middle'})
             monster_data['hit_points'] = int(hp_text.text.strip()) if hp_text else 0
 
             hp_dice = hp_element.find_next_sibling('span', {'data-type': 'throw'})
             dice_value = hp_element.find_next_sibling('span', {'data-type': 'dice'})
-            monster_data['hit_dice'] = int(hp_dice.text) * int(dice_value.text) if hp_dice and dice_value else 0
+            monster_data['hit_dice'] = f"{hp_dice.text}к{dice_value.text}" if hp_dice and dice_value else ""
             logger.info(f"Хиты: {monster_data['hit_points']} ({monster_data['hit_dice']})")
         else:
             monster_data['hit_points'] = 0
-            monster_data['hit_dice'] = 0
+            monster_data['hit_dice'] = ''
             logger.warning(f"Хиты не найдены на странице {full_url}")
 
         # Опасность
-        cr_element = soup.find('strong', text="Опасность")
+        cr_element = soup.find('strong', string="Опасность")
         if cr_element:
-            cr_text = cr_element.find_next_sibling(text=True).strip()
+            cr_text = cr_element.find_next_sibling(string=True).strip()
             monster_data['challenge_rating'] = parse_fraction(cr_text.split()[0])
 
             xp_start = cr_text.find("(") + 1
@@ -281,8 +281,8 @@ def parse_monster_info(url):
             monster_data['experience'] = int(cr_text[xp_start:xp_end].strip()) if xp_start > 0 and xp_end > xp_start else 0
             logger.info(f"Опасность: {monster_data['challenge_rating']}, Опыт: {monster_data['experience']}")
         else:
-            monster_data['challenge_rating'] = "Не найдено"
-            monster_data['experience'] = "Не найдено"
+            monster_data['challenge_rating'] = 0
+            monster_data['experience'] = 0
             logger.warning(f"Опасность не найдена на странице {full_url}")
 
     except Exception as e:
