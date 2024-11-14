@@ -44,11 +44,18 @@ function displayInfoBlocks(data) {
     document.getElementById('battle-rating').textContent = rating;
 }
 
+// Универсальная функция для обновления свойств персонажа
+function updateCharacterProperty(index, property, value) {
+    charactersData[index][property] = value;
+    displayCharacters();
+    sendInit();
+}
+
 // Переход к следующему персонажу
 function nextTurn() {
     // Упорядочиваем персонажей по инициативе (по убыванию)
     let characters = charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
-    let _characters = characters
+    let _characters = characters;
 
     if (currentRound === 0) {
         // Если раунд сюрприз, фильтруем только персонажей с `surprise: true`
@@ -103,7 +110,7 @@ function displayCurrentAndNextTurn() {
 
     const currentCharacter = characters.find(character => parseFloat(character.init) == currentCharacterIndex);
     const nextCharacter = characters.find(character => parseFloat(character.init) < currentCharacterIndex) || characters[0];
-    nextCharacterIndex = nextCharacter.init
+    nextCharacterIndex = nextCharacter.init;
     document.getElementById('current-round').textContent = currentRound;
     if (currentCharacter) document.getElementById('current-turn').textContent = currentCharacter.name;
     if (nextCharacter) document.getElementById('next-turn').textContent = nextCharacter.name;
@@ -127,11 +134,7 @@ function displayCharacters() {
             row.classList.add('current-turn');
         }
 
-        if (character.npc === 'true') {
-            row.classList.add('character-npc');
-        } else {
-            row.classList.add('character-player');
-        }
+        row.classList.add(character.npc === 'true' ? 'character-npc' : 'character-player');
 
         // Поле инициативы с вызовом window.prompt при клике
         const initSpan = document.createElement('span');
@@ -139,7 +142,7 @@ function displayCharacters() {
         initSpan.onclick = () => {
             const newValue = window.prompt("Введите новое значение инициативы:", character.init);
             if (newValue !== null && !isNaN(newValue)) {
-                updateCharacterInit(index, newValue);
+                updateCharacterProperty(index, "init", parseFloat(newValue));
             }
         };
 
@@ -150,9 +153,7 @@ function displayCharacters() {
         nameSpan.onclick = () => {
             const newValue = window.prompt("Введите новое имя:", character.name);
             if (newValue !== null) {
-                character.name = newValue;
-                displayCharacters();
-                sendInit();
+                updateCharacterProperty(index, "name", newValue);
             }
         };
 
@@ -162,7 +163,7 @@ function displayCharacters() {
         cdSpan.onclick = () => {
             const newValue = window.prompt("Введите новое значение КД:", character.cd);
             if (newValue !== null && !isNaN(newValue)) {
-                updateCharacterCd(index, newValue);
+                updateCharacterProperty(index, "cd", newValue);
             }
         };
 
@@ -172,26 +173,26 @@ function displayCharacters() {
         hpSpan.onclick = () => {
             const newValue = window.prompt("Введите новое значение текущего HP:", character.hp_now);
             if (newValue !== null && !isNaN(newValue)) {
-                updateCharacterHp(index, newValue);
+                updateCharacterProperty(index, "hp_now", newValue);
             }
         };
 
         // Поле сюрприза (чекбокс)
         const surpriseLabel = document.createElement('label');
-        surpriseLabel.innerHTML = `Sur: <input type="checkbox" ${character.surprise === "true" ? "checked" : ""} onchange="updateCharacterSur(${index}, this.checked)" />`;
+        surpriseLabel.innerHTML = `Sur: <input type="checkbox" ${character.surprise === "true" ? "checked" : ""} onchange="updateCharacterProperty(${index}, 'surprise', this.checked ? 'true' : 'false')" />`;
 
         // Поле НПС (чекбокс)
         const npcLabel = document.createElement('label');
-        npcLabel.innerHTML = `НПС: <input type="checkbox" ${character.npc === "true" ? "checked" : ""} onchange="updateCharacterNpc(${index}, this.checked)" />`;
+        npcLabel.innerHTML = `НПС: <input type="checkbox" ${character.npc === "true" ? "checked" : ""} onchange="updateCharacterProperty(${index}, 'npc', this.checked ? 'true' : 'false')" />`;
 
         // Поле опыта с вызовом window.prompt при клике
         const expSpan = document.createElement('span');
-        expSpanTitle = character.npc ? 'EXP' : 'LVL';
+        let expSpanTitle = character.npc ? 'EXP' : 'LVL';
         expSpan.innerHTML = `${expSpanTitle}: ${character.exp}`;
         expSpan.onclick = () => {
             const newValue = window.prompt("Введите новое значение опыта:", character.exp);
             if (newValue !== null && !isNaN(newValue)) {
-                updateCharacterExp(index, newValue);
+                updateCharacterProperty(index, "exp", newValue);
             }
         };
 
@@ -219,75 +220,6 @@ function displayCharacters() {
     });
 
     displayCurrentAndNextTurn();
-}
-
-// Функция для редактирования имени персонажа
-function editCharacterName(index) {
-    const currentName = charactersData[index].name;
-    const newName = window.prompt("Введите новое имя:", currentName);
-    if (newName !== null) {
-        charactersData[index].name = newName;
-        displayCharacters();
-        sendInit(); // Отправка данных на сервер после изменения имени
-    }
-}
-
-// Функция для редактирования КД персонажа
-function updateCharacterCd(index, newCd) {
-    charactersData[index].cd = newCd;
-    displayCharacters();
-    sendInit(); // Если нужно отправить данные на сервер
-}
-
-
-// Функция обновления инициативы персонажа
-function updateCharacterInit(index, value) {
-    // Преобразуем введенное значение в число с плавающей точкой
-    let init = parseFloat(value);
-
-    // Проверяем, что значение является числом; если нет, выходим из функции
-    if (isNaN(init)) {
-        console.error("Инициатива должна быть числом");
-        return;
-    }
-
-    // Проверяем уникальность инициативы и увеличиваем на 0.01, если такое значение уже существует
-    while (!isUniqueInitiative(init, charactersData)) {
-        init = parseFloat((init + 0.1).toFixed(2)); // Округляем до 2 знаков после увеличения
-    }
-
-    // Обновляем инициативу в данных персонажей
-    charactersData[index].init = init;
-
-    // Обновляем отображение данных
-    displayCharacters();
-
-    // Отправляем данные на сервер
-    sendInit(); // Отправка данных на сервер при обновлении инициативы
-}
-
-// Функция обновления здоровья персонажа
-function updateCharacterHp(index, value) {
-    charactersData[index].hp_now = value;
-    displayCharacters();
-    sendInit(); // Отправка данных на сервер при обновлении здоровья
-}
-
-function updateCharacterSur(index, isChecked) {
-    charactersData[index].surprise = isChecked ? "true" : "false"; // Устанавливаем значение "true" или "false" в зависимости от состояния чекбокса
-    displayCharacters();
-    sendInit(); // Отправка данных на сервер при обновлении признака НПС
-}
-
-function updateCharacterNpc(index, isChecked) {
-    charactersData[index].npc = isChecked ? "true" : "false"; // Устанавливаем значение "true" или "false" в зависимости от состояния чекбокса
-    displayCharacters();
-    sendInit(); // Отправка данных на сервер при обновлении признака НПС
-}
-function updateCharacterExp(index, value) {
-    charactersData[index].exp = value; // Устанавливаем значение "true" или "false" в зависимости от состояния чекбокса
-    displayCharacters();
-    sendInit(); // Отправка данных на сервер при обновлении признака НПС
 }
 
 // Функция сброса инициативы
@@ -483,3 +415,6 @@ function calculateEncounterData(characters) {
 
 // Запуск функции загрузки данных при загрузке страницы
 window.onload = loadInitiativeData;
+document.querySelector(".toggle-form-button.reset").addEventListener("click", resetInitiative);
+document.querySelector(".toggle-form-button.next").addEventListener("click", nextTurn);
+document.querySelector(".toggle-form-button.prev").addEventListener("click", prevTurn);

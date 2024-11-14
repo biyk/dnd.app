@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import logging
 import re
 import sqlite3
+import os
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
@@ -14,6 +15,75 @@ base_url = "https://dnd.su"
 
 # Настройка базы данных SQLite
 db_name = "../data/data.db"
+
+# Директория для сохранения скачанных страниц
+cache_dir = "dndsu"
+os.makedirs(cache_dir, exist_ok=True)
+
+def migrate_database():
+    """
+    Проверяет типы полей таблицы monsters и, если необходимо, меняет их на требуемые.
+    """
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Проверяем, существует ли таблица monsters и имеет ли поля с типом TEXT
+    cursor.execute("PRAGMA table_info(monsters)")
+    columns = cursor.fetchall()
+
+    # Определяем, если нужно выполнить миграцию
+    migration_needed = any(
+        col[1] in ["armor_class", "hit_points", "hit_dice", "challenge_rating", "experience"] and col[2] == "TEXT"
+        for col in columns
+    )
+
+    if migration_needed:
+        logger.info("Начинается миграция базы данных для изменения типов полей...")
+
+        # Создаем новую таблицу с правильными типами данных
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS monsters_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                url TEXT UNIQUE,
+                armor_class INTEGER,
+                hit_points INTEGER,
+                hit_dice INTEGER,
+                challenge_rating REAL,
+                experience INTEGER
+            )
+        ''')
+
+        # Копируем данные из старой таблицы в новую, преобразуя типы
+        cursor.execute('''
+            INSERT INTO monsters_new (name, url, armor_class, hit_points, hit_dice, challenge_rating, experience)
+            SELECT 
+                name,
+                url,
+                CASE WHEN armor_class GLOB '*[0-9]*' THEN CAST(armor_class AS INTEGER) ELSE 0 END,
+                CASE WHEN hit_points GLOB '*[0-9]*' THEN CAST(hit_points AS INTEGER) ELSE 0 END,
+                CASE WHEN hit_dice GLOB '*[0-9]*' THEN CAST(hit_dice AS INTEGER) ELSE 0 END,
+                CASE 
+                    WHEN challenge_rating LIKE '1/2' THEN 0.5
+                    WHEN challenge_rating LIKE '1/4' THEN 0.25
+                    WHEN challenge_rating LIKE '1/8' THEN 0.125
+                    WHEN challenge_rating GLOB '*[0-9]*' THEN CAST(challenge_rating AS REAL)
+                    ELSE 0.0
+                END,
+                CASE WHEN experience GLOB '*[0-9]*' THEN CAST(experience AS INTEGER) ELSE 0 END
+            FROM monsters
+        ''')
+
+        # Удаляем старую таблицу и переименовываем новую таблицу
+        cursor.execute("DROP TABLE monsters")
+        cursor.execute("ALTER TABLE monsters_new RENAME TO monsters")
+        conn.commit()
+        logger.info("Миграция завершена успешно.")
+    else:
+        logger.info("Миграция не требуется, типы полей уже соответствуют требованиям.")
+
+    conn.close()
+
 
 
 def setup_database():
@@ -27,11 +97,11 @@ def setup_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             url TEXT UNIQUE,
-            armor_class TEXT,
-            hit_points TEXT,
-            hit_dice TEXT,
-            challenge_rating TEXT,
-            experience TEXT
+            armor_class INTEGER,
+            hit_points INTEGER,
+            hit_dice INTEGER,
+            challenge_rating REAL,
+            experience INTEGER
         )
     ''')
     conn.commit()
@@ -59,11 +129,11 @@ def save_or_update_monster(monster_data):
             WHERE url = ?
         ''', (
             monster_data['name'],
-            monster_data.get('armor_class', 'Не найдено'),
-            monster_data.get('hit_points', 'Не найдено'),
-            monster_data.get('hit_dice', 'Не найдено'),
-            monster_data.get('challenge_rating', 'Не найдено'),
-            monster_data.get('experience', 'Не найдено'),
+            monster_data.get('armor_class', 0),
+            monster_data.get('hit_points', 0),
+            monster_data.get('hit_dice', 0),
+            monster_data.get('challenge_rating', 0.0),
+            monster_data.get('experience', 0),
             monster_data['url']
         ))
         logger.info(f"Запись для {monster_data['name']} обновлена в базе данных")
@@ -75,16 +145,28 @@ def save_or_update_monster(monster_data):
         ''', (
             monster_data['name'],
             monster_data['url'],
-            monster_data.get('armor_class', 'Не найдено'),
-            monster_data.get('hit_points', 'Не найдено'),
-            monster_data.get('hit_dice', 'Не найдено'),
-            monster_data.get('challenge_rating', 'Не найдено'),
-            monster_data.get('experience', 'Не найдено')
+            monster_data.get('armor_class', 0),
+            monster_data.get('hit_points', 0),
+            monster_data.get('hit_dice', 0),
+            monster_data.get('challenge_rating', 0.0),
+            monster_data.get('experience', 0)
         ))
         logger.info(f"Новая запись для {monster_data['name']} добавлена в базу данных")
 
     conn.commit()
     conn.close()
+
+
+def parse_fraction(value):
+    """
+    Преобразует строку с дробью вида '1/4' в число с плавающей точкой.
+    Если строка не содержит дробь, пытается преобразовать в float.
+    """
+    if '/' in value:
+        num, denom = value.split('/')
+        return float(num) / float(denom)
+    else:
+        return float(value)
 
 
 def get_monster_links():
@@ -115,23 +197,50 @@ def get_monster_links():
     return monsters
 
 
+def fetch_page(url, filename):
+    """
+    Скачивает страницу по URL и сохраняет её в файл, если ещё не была скачана.
+    Возвращает содержимое страницы.
+    """
+    filepath = os.path.join(cache_dir, filename)
+
+    # Проверяем, скачана ли страница
+    if os.path.exists(filepath):
+        logger.info(f"Используем сохраненную страницу: {filepath}")
+        with open(filepath, 'r', encoding='utf-8') as file:
+            return file.read()
+
+    # Если страницы нет, загружаем её
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Ошибка при запросе страницы {url}: {e}")
+        return None
+
+    # Сохраняем скачанную страницу
+    with open(filepath, 'w', encoding='utf-8') as file:
+        file.write(response.text)
+    logger.info(f"Скачанная страница сохранена: {filepath}")
+
+    return response.text
+
+
 def parse_monster_info(url):
     """
     Парсит информацию о монстре по указанному URL.
     Возвращает словарь с данными о Классе доспехов, Хитах, Опасности и опыте.
     """
     full_url = f"{base_url}{url}"
-    logger.info(f"Начинаем парсинг страницы: {full_url}")
+    filename = f"{url.strip('/').replace('/', '_')}.html"
 
-    try:
-        response = requests.get(full_url)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        logger.error(f"Ошибка при запросе страницы {full_url}: {e}")
+    logger.info(f"Начинаем парсинг страницы: {full_url}")
+    page_content = fetch_page(full_url, filename)
+    if not page_content:
         return None
 
     # Парсим страницу
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(page_content, 'html.parser')
     monster_data = {}
 
     try:
@@ -140,36 +249,36 @@ def parse_monster_info(url):
         if ac_element:
             ac_text = ac_element.find_next_sibling(text=True).strip()
             armor_class = re.search(r'\d+', ac_text)
-            monster_data['armor_class'] = armor_class.group(0) if armor_class else "Не найдено"
+            monster_data['armor_class'] = int(armor_class.group(0)) if armor_class else 0
             logger.info(f"Класс Доспеха: {monster_data['armor_class']}")
         else:
-            monster_data['armor_class'] = "Не найдено"
+            monster_data['armor_class'] = 0
             logger.warning(f"Класс Доспеха не найден на странице {full_url}")
 
         # Хиты
         hp_element = soup.find('strong', text="Хиты")
         if hp_element:
             hp_text = hp_element.find_next_sibling('span', {'data-type': 'middle'})
-            monster_data['hit_points'] = hp_text.text.strip() if hp_text else "Не найдено"
+            monster_data['hit_points'] = int(hp_text.text.strip()) if hp_text else 0
 
             hp_dice = hp_element.find_next_sibling('span', {'data-type': 'throw'})
             dice_value = hp_element.find_next_sibling('span', {'data-type': 'dice'})
-            monster_data['hit_dice'] = f"{hp_dice.text}к{dice_value.text}" if hp_dice and dice_value else "Не найдено"
+            monster_data['hit_dice'] = int(hp_dice.text) * int(dice_value.text) if hp_dice and dice_value else 0
             logger.info(f"Хиты: {monster_data['hit_points']} ({monster_data['hit_dice']})")
         else:
-            monster_data['hit_points'] = "Не найдено"
-            monster_data['hit_dice'] = "Не найдено"
+            monster_data['hit_points'] = 0
+            monster_data['hit_dice'] = 0
             logger.warning(f"Хиты не найдены на странице {full_url}")
 
         # Опасность
         cr_element = soup.find('strong', text="Опасность")
         if cr_element:
             cr_text = cr_element.find_next_sibling(text=True).strip()
-            monster_data['challenge_rating'] = cr_text.split()[0]
+            monster_data['challenge_rating'] = parse_fraction(cr_text.split()[0])
+
             xp_start = cr_text.find("(") + 1
             xp_end = cr_text.find(" опыта)")
-            monster_data['experience'] = cr_text[
-                                         xp_start:xp_end].strip() if xp_start > 0 and xp_end > xp_start else "Не найдено"
+            monster_data['experience'] = int(cr_text[xp_start:xp_end].strip()) if xp_start > 0 and xp_end > xp_start else 0
             logger.info(f"Опасность: {monster_data['challenge_rating']}, Опыт: {monster_data['experience']}")
         else:
             monster_data['challenge_rating'] = "Не найдено"
@@ -187,6 +296,8 @@ def process_monsters():
     """
     Загружает ссылки на монстров с главной страницы, парсит данные о каждом монстре и сохраняет в SQLite.
     """
+    # Вызов миграции базы данных перед основными операциями
+    migrate_database()
     setup_database()  # Создаем таблицу, если ещё не создана
     monsters = get_monster_links()
 

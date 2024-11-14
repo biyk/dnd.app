@@ -1,3 +1,6 @@
 /build/
 /static/images/
 /static/audio/
+/app.exe
+/app.spec
+/utils/dndsu/
