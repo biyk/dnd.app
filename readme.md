@@ -7,7 +7,10 @@
 pyinstaller --onefile --add-data "templates;templates" --add-data "static;static" app.py ; rm .\app.exe; move dist\app.exe .; rm dist
 ```
 
-
+6. запуск тестов
+```bash
+npx mocha test/test.js
+```
 
 
 
