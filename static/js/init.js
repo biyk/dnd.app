@@ -199,4 +199,6 @@ console.log('Before update:', this.charactersData[index]);
 
 // Инициализация и запуск
 const initiativeManager = new InitiativeManager();
+window.initiativeManager = initiativeManager;
 initiativeManager.loadInitiativeData();
+export { InitiativeManager };

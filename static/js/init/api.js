@@ -1,4 +1,4 @@
-export  function loadInitiativeData() {
+export async function loadInitiativeData() {
         fetch("/api/config/init")
             .then(response => {
                 if (!response.ok) throw new Error(`Ошибка загрузки: ${response.status}`);
