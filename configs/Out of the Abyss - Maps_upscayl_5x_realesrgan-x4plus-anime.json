@@ -6415,21 +6415,21 @@
             ]
         ]
     },
-    "lastUpdated": 1731687241,
+    "lastUpdated": 1731690479,
     "ambience": "0fICWTcQEnk",
     "init": {
         "round": 2,
         "try": 4.1,
         "all": [
             {
+                "cd": "8",
+                "exp": "8",
+                "hp_max": "8",
+                "hp_now": "8",
                 "init": "8.1",
                 "name": "8",
-                "cd": "8",
-                "hp_now": "8",
-                "hp_max": "8",
-                "exp": "8",
-                "surprise": "false",
-                "npc": "false"
+                "npc": "false",
+                "surprise": "false"
             },
             {
                 "cd": "13",
@@ -6505,14 +6505,14 @@
                 "surprise": "false"
             },
             {
+                "cd": "1",
+                "exp": "1",
+                "hp_max": "1",
+                "hp_now": "1",
                 "init": "1.20",
                 "name": "1",
-                "cd": "1",
-                "hp_now": "1",
-                "hp_max": "1",
-                "exp": "1",
-                "surprise": "false",
-                "npc": "false"
+                "npc": "false",
+                "surprise": "false"
             },
             {
                 "cd": "22",
@@ -6528,5 +6528,5 @@
         "rating": 3,
         "next": 4
     },
-    "timer": 1731687301
+    "timer": 1731690539
 }

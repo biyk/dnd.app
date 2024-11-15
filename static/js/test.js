@@ -1,6 +1,6 @@
 export async function test() {
     console.log("=== Начало тестирования ===");
-
+    let sleeper = 200;
     let manager = initiativeManager;
 
     //проверка, что данные загружаются
@@ -12,15 +12,15 @@ export async function test() {
             console.error("✗ Ошибка при загрузке данных");
         }
     })();
-    await sleep(200);
-    //---проверка работы интерфейса
-    //Клик вперед
+
+    console.log("=== Клик вперед ===");
+    await sleep(sleeper);
     await (async () => {
         const oldData = (manager)=>{
             return {currentCharacterIndex,nextCharacterIndex } = manager
         }
         document.querySelector('.toggle-form-button.next').click();
-        await sleep(200);
+        await sleep(sleeper);
         const newData = (manager)=>{
             return {currentCharacterIndex,nextCharacterIndex } = manager
         }
@@ -30,12 +30,14 @@ export async function test() {
             console.error("✗ Кнопка Next не работает",newData,oldData);
         }
     })();
-     await sleep(200);
 
+
+    console.log("=== Клик назад ===");
+    await sleep(sleeper);
      await (async () => {
          const oldIndex = manager.currentCharacterIndex;
          document.querySelector('.toggle-form-button.prev').click();
-         await sleep(200);
+         await sleep(sleeper);
          const newIndex = manager.currentCharacterIndex;
          if (oldIndex !== newIndex) {
              console.log("✓ Кнопка Prev работает");
@@ -44,21 +46,47 @@ export async function test() {
          }
      })();
 
-     //добавление персонажа и тестирование на нем
+     console.log("=== добавление персонажа ===");
+     await sleep(sleeper);
+     await (async () => {
+         let count = initiativeManager.charactersData.length;
+         const addCharacter = document.querySelector(".toggle-form-button.add");
+         addCharacter.click();
+
+         document.getElementById('new-init').value = '30';//с самой большой инициативой чтобы был в самом верху
+         document.getElementById('new-name').value = 'Персонаж для Теста';
+         document.getElementById('new-cd').value = '15';
+         document.getElementById('new-hp-now').value = 20;
+         document.getElementById('new-hp-max').value = 30;
+         document.getElementById('new-surprise').checked = true;
+         document.getElementById('new-npc').checked = true;
+         document.getElementById('new-experience').value = '20';
+
+         const saveCharacter = document.getElementById("add-character-button");
+         saveCharacter.click();
+         await sleep(sleeper);
+         const count2 = initiativeManager.charactersData.length;
+         if (count !== count2) {
+             console.log("✓ Кнопка Добавить персонажа работает");
+         } else {
+             console.error("✗ Кнопка Добавить персонажа не работает");
+         }
+
+     })();
 
 
-     await sleep(200);
-        // клик на изменение данных пользователя (здоровье)
+    console.log("=== изменение данных пользователя (здоровье) ===");
+    await sleep(sleeper);
      await (async () => {
          let tempPrompt = window.prompt;
-         let newName = "Тестовый Персонаж";
+         let newName = "1";
          window.prompt = () => newName;
 
-         const firstCharacterNameSpan = document.querySelector('.editable-value');
+         const firstCharacterNameSpan = document.querySelector('.editable-value.hp_now');
          firstCharacterNameSpan.click();
-         await sleep(200);
+         await sleep(sleeper);
 
-         if (manager.charactersData[0].name === newName) {
+         if (manager.charactersData[0].hp_now === newName) {
              console.log("✓ Изменение данных персонажа работает");
          } else {
              console.error("✗ Изменение данных персонажа не работает");
@@ -66,27 +94,9 @@ export async function test() {
 
          window.prompt = tempPrompt; // Восстановление оригинальной функции
      })();
-    await sleep(200);
 
-
-    // await (async () => {
-    //     let tempPrompt = window.prompt;
-    //     window.prompt = () => "Некорректные данные";
-    //
-    //     const firstCharacterInitSpan = document.querySelector('.editable-value');
-    //     firstCharacterInitSpan.click();
-    //     await sleep(200);
-    //
-    //     const updatedInit = manager.charactersData[0].init;
-    //     if (isNaN(parseFloat(updatedInit))) {
-    //         console.error("✗ Некорректные данные обновили инициативу", updatedInit);
-    //     } else {
-    //         console.log("✓ Некорректные данные не изменили инициативу");
-    //     }
-    //
-    //     window.prompt = tempPrompt; // Восстановление оригинальной функции
-    // })();
-
+     console.log("=== определение текущего персонажа ===");
+     await sleep(sleeper);
     await (async () => {
         const current = manager.charactersData.find(c => parseFloat(c.init) === manager.currentCharacterIndex);
         if (current) {
@@ -95,14 +105,14 @@ export async function test() {
             console.error("✗ Ошибка в определении текущего персонажа");
         }
     })();
-    await sleep(200);
 
+    console.log("=== Проверка восстановления здоровья ===");
+    await sleep(sleeper);
     await (async () => {
-        // Проверка восстановления здоровья
         const testCharacter = manager.charactersData[0];
         testCharacter.hp_now = 1; // Умышленно уменьшаем здоровье
         manager.healCharacter(0);
-        await sleep(200);
+        await sleep(sleeper);
 
         if (testCharacter.hp_now === testCharacter.hp_max) {
             console.log("✓ Восстановление здоровья работает");
@@ -111,9 +121,11 @@ export async function test() {
         }
 
 
+        console.log("=== Проверка удаления персонажа ===");
+        await sleep(sleeper);
         const initialLength = manager.charactersData.length;
         manager.deleteCharacter(0);
-        await sleep(200);
+        await sleep(sleeper);
 
         if (manager.charactersData.length === initialLength - 1) {
             console.log("✓ Удаление персонажа работает");
@@ -121,7 +133,7 @@ export async function test() {
             console.error("✗ Удаление персонажа не работает");
         }
     })();
-    await sleep(200);
+    await sleep(sleeper);
 }
 
 function sleep(ms) {

@@ -25,10 +25,12 @@ def create_app():
     from routes.index import index_bp
     from routes.config import config_bp
     from routes.polygons import polygons_bp
+    from routes.data import data_bp
 
     app.register_blueprint(index_bp)
     app.register_blueprint(config_bp, url_prefix='/api')
     app.register_blueprint(polygons_bp, url_prefix='/api')
+    app.register_blueprint(data_bp, url_prefix='/api')
 
     return app
 

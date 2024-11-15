@@ -19,6 +19,7 @@ function createEditableSpan(content, property, index, callback, after='') {
     const valueSpan = document.createElement('span');
     valueSpan.textContent = value;
     valueSpan.classList.add('editable-value');
+    valueSpan.classList.add(property);
     valueSpan.onclick = () => {
         const newValue = window.prompt(`Введите новое значение для ${property}:`, valueSpan.textContent);
         if (newValue !== null) {
@@ -62,14 +63,9 @@ class InitiativeManager {
 
     // Универсальная функция для обновления свойств персонажа
     updateCharacterProperty(index, property, value) {
-console.log('Before update:', this.charactersData[index]);
-
         this.charactersData[index][property] = value;
-        console.log(`Updating ${property} to ${value}`);
         this.displayCharacters();
         this.sendInit();
-        console.log('After update:', this.charactersData[index]);
-
     }
 
     // Переход к следующему персонажу
@@ -190,7 +186,7 @@ console.log('Before update:', this.charactersData[index]);
         // Метод для переключения видимости формы добавления персонажа
     toggleAddCharacterForm() {
         const form = document.getElementById('add-character-form');
-        form.style.display = form.style.display === 'none' || form.style.display === '' ? 'block' : 'none';
+        form.style.display = form.style.display === 'none' || form.style.display === '' ? 'grid' : 'none';
     }
 
     // Метод проверки уникальности инициативы

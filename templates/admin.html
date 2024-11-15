@@ -133,8 +133,30 @@
 
     <!-- Кнопка открытия формы добавления персонажа -->
     <button class="toggle-form-button add">Добавить персонажа</button>
-    </div>
-    <!-- Форма добавления нового персонажа -->
+    <input type="text" id="npc-input" placeholder="Type to search NPCs...">
+    <ul id="npc-list"></ul>
+           <script>
+        const input = document.getElementById('npc-input');
+        const npcList = document.getElementById('npc-list');
+
+        input.addEventListener('input', async () => {
+            const query = input.value;
+            if (query.length === 0) {
+                npcList.innerHTML = '';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Error fetching data');
+                const data = await response.json();
+                npcList.innerHTML = data.map(npc => `<li>${npc.name}</li>`).join('');
+            } catch (error) {
+                console.error('Error:', error);
+                npcList.innerHTML = '<li>Error loading NPCs</li>';
+            }
+        });
+    </script>
+            <!-- Форма добавления нового персонажа -->
     <div class="add-character-form" id="add-character-form">
         <label>Init: <input type="text" id="new-init"></label>
         <label>Имя: <input type="text" id="new-name"></label>
@@ -147,6 +169,8 @@
 
 
     </div>
+    </div>
+
 
 </div>
 <div id="dm-tab" class="tab-content">
