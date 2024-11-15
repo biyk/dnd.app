@@ -115,3 +115,30 @@ export function calculateEncounterData(characters) {
 export function isUniqueInitiative(init, characters) {
     return !characters.some(character => parseFloat(character.init) === parseFloat(init));
 }
+
+export function createEditableSpan(content, property, index, callback) {
+    // Разделяем текст на лейбл и значение
+    const [label, value] = content.split(': ');
+
+    // Создаем span для лейбла, который будет неизменным
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = `${label}: `;
+
+    // Создаем span для значения, которое будет редактируемым
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = value;
+    valueSpan.classList.add('editable-value');
+    valueSpan.onclick = () => {
+        const newValue = window.prompt(`Введите новое значение для ${property}:`, valueSpan.textContent);
+        if (newValue !== null && !isNaN(newValue)) {
+            valueSpan.textContent = newValue;
+            callback(index, property, newValue);
+        }
+    };
+
+    // Оборачиваем лейбл и значение в общий контейнер
+    const containerSpan = document.createElement('span');
+    containerSpan.append(labelSpan, valueSpan);
+
+    return containerSpan;
+}

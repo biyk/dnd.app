@@ -3,16 +3,35 @@ import {displayInfoBlocks,displayCurrentAndNextTurn} from './init/display.js';
 import {loadInitiativeData, sendInit} from './init/api.js';
 
 
-function createEditableSpan(content, property, index, callback) {
-    const span = document.createElement('span');
-    span.textContent = content;
-    span.onclick = () => {
-        const newValue = window.prompt(`Введите новое значение для ${property}:`, span.textContent);
-        if (newValue !== null && !isNaN(newValue)) {
+function createEditableSpan(content, property, index, callback, after='') {
+    // Разделяем текст на лейбл и значение
+    const [label, value] = content.split(': ');
+
+    // Создаем span для лейбла, который будет неизменным
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = `${label}: `;
+
+    // Создаем span для лейбла, который будет неизменным
+    const afterSpan = document.createElement('span');
+    afterSpan.textContent = after;
+
+    // Создаем span для значения, которое будет редактируемым
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = value;
+    valueSpan.classList.add('editable-value');
+    valueSpan.onclick = () => {
+        const newValue = window.prompt(`Введите новое значение для ${property}:`, valueSpan.textContent);
+        if (newValue !== null) {
+            valueSpan.textContent = newValue;
             callback(index, property, newValue);
         }
     };
-    return span;
+
+    // Оборачиваем лейбл и значение в общий контейнер
+    const containerSpan = document.createElement('span');
+    containerSpan.append(labelSpan, valueSpan, afterSpan);
+
+    return containerSpan;
 }
 
 class InitiativeManager {
@@ -43,9 +62,14 @@ class InitiativeManager {
 
     // Универсальная функция для обновления свойств персонажа
     updateCharacterProperty(index, property, value) {
+console.log('Before update:', this.charactersData[index]);
+
         this.charactersData[index][property] = value;
+        console.log(`Updating ${property} to ${value}`);
         this.displayCharacters();
         this.sendInit();
+        console.log('After update:', this.charactersData[index]);
+
     }
 
     // Переход к следующему персонажу
@@ -109,7 +133,7 @@ class InitiativeManager {
             const nameSpan = createEditableSpan(`Имя: ${character.name}`, "name", index, this.updateCharacterProperty.bind(this));
             const initSpan = createEditableSpan(`Init: ${character.init}`, "init", index, this.updateCharacterProperty.bind(this));
             const cdSpan = createEditableSpan(`КД: ${character.cd}`, "cd", index, this.updateCharacterProperty.bind(this));
-            const hpSpan = createEditableSpan(`HP: ${character.hp_now} / ${character.hp_max}`, "hp_now", index, this.updateCharacterProperty.bind(this));
+            const hpSpan = createEditableSpan(`HP: ${character.hp_now}`, "hp_now", index, this.updateCharacterProperty.bind(this),`/ ${character.hp_max}`);
             const expSpanTitle = character.npc === 'true' ? 'DNG' : 'LVL';
             const expSpan = createEditableSpan(`${expSpanTitle}: ${character.exp}`, "exp", index, this.updateCharacterProperty.bind(this));
 

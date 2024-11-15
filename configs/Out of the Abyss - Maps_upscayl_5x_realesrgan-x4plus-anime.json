@@ -6415,19 +6415,19 @@
             ]
         ]
     },
-    "lastUpdated": 1731644892,
+    "lastUpdated": 1731656483,
     "ambience": "0fICWTcQEnk",
     "init": {
         "round": 2,
         "try": 4.1,
         "all": [
             {
-                "cd": "12",
-                "exp": "2",
+                "cd": "13",
+                "exp": "22",
                 "hp_max": "12",
-                "hp_now": "12",
-                "init": 6,
-                "name": "\u0433\u043e\u0431\u043b\u0438\u043d",
+                "hp_now": "122",
+                "init": "8",
+                "name": "\u0433\u043e\u0431\u043b\u0438\u043d 3",
                 "npc": "true",
                 "surprise": "false"
             },
@@ -6500,7 +6500,7 @@
                 "hp_max": "12",
                 "hp_now": "12",
                 "init": 1,
-                "name": "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u043b\u043e\u0433\u043e\u0432\u04302",
+                "name": "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u043b\u043e\u0433\u043e\u0432\u0430",
                 "npc": "true",
                 "surprise": "true"
             }
@@ -6508,5 +6508,5 @@
         "rating": 3,
         "next": 4
     },
-    "timer": 1731644952
+    "timer": 1731656543
 }

@@ -5,3 +5,5 @@
 /app.spec
 /utils/dndsu/
 /node_modules/
+*.log
+*.pdf
