@@ -1,5 +1,5 @@
-import {calculateEncounterData} from './init/func.js';
-import {displayInfoBlocks,displayCurrentAndNextTurn} from './init/display.js';
+import {calculateEncounterData, debounce} from './init/func.js';
+import {displayInfoBlocks,displayCurrentAndNextTurn, fillEditForm} from './init/display.js';
 import {loadInitiativeData, sendInit} from './init/api.js';
 
 
@@ -61,11 +61,15 @@ class InitiativeManager {
         sendInit.call(this);
     }
 
+    displayCharactersAndSendInit(){
+        this.displayCharacters();
+        this.sendInit();
+    }
+
     // Универсальная функция для обновления свойств персонажа
     updateCharacterProperty(index, property, value) {
         this.charactersData[index][property] = value;
-        this.displayCharacters();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
     }
 
     // Переход к следующему персонажу
@@ -84,8 +88,7 @@ class InitiativeManager {
             this.currentRound++;
         }
 
-        this.displayCharacters();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
     }
 
     // Переход к предыдущему персонажу
@@ -105,8 +108,7 @@ class InitiativeManager {
             this.currentCharacterIndex = characters[currentIndex - 1].init;
         }
 
-        this.displayCharacters();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
     }
 
 
@@ -165,22 +167,19 @@ class InitiativeManager {
         this.charactersData.forEach((character) => (character.init = ''));
         this.currentRound = 0;
 
-        this.displayCharacters();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
     }
 
     // Функция восстановления здоровья
     healCharacter(index) {
         this.charactersData[index].hp_now = this.charactersData[index].hp_max;
-        this.displayCharacters();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
     }
 
     // Функция удаления персонажа
     deleteCharacter(index) {
         this.charactersData.splice(index, 1);
-        this.displayCharacters();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
     }
 
         // Метод для переключения видимости формы добавления персонажа
@@ -222,9 +221,13 @@ class InitiativeManager {
         };
 
         this.charactersData.push(newCharacter);
-        this.displayCharacters();
         this.toggleAddCharacterForm();
-        this.sendInit();
+        this.displayCharactersAndSendInit();
+    }
+
+    // Метод для заполнения формы редактирования данными
+    fillEditForm(data) {
+        fillEditForm(data);
     }
 
     // Добавление обработчиков событий
@@ -235,24 +238,39 @@ class InitiativeManager {
             document.querySelector(".toggle-form-button.prev").addEventListener("click", this.prevTurn.bind(this));
             document.querySelector(".toggle-form-button.add").addEventListener("click", this.toggleAddCharacterForm.bind(this)); // Новый обработчик
             document.getElementById('add-character-button').addEventListener("click", this.addCharacter.bind(this)); // Обработчик добавления персонажа
-            document.getElementById('npc-input').addEventListener('input', async () => {
-                   const npcList = document.getElementById('npc-list');
-                   const input = document.getElementById('npc-input'); // Получаем input элемент
-                const query = input.value;
-                if (query.length === 0) {
-                    npcList.innerHTML = '';
-                    return;
-                }
-                try {
-                    const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}`);
-                    if (!response.ok) throw new Error('Error fetching data');
-                    const data = await response.json();
-                    npcList.innerHTML = data.map(npc => `<li>${npc.name}</li>`).join('');
-                } catch (error) {
-                    console.error('Error:', error);
-                    npcList.innerHTML = '<li>Error loading NPCs</li>';
-                }
-            });
+
+
+            // Изменяем обработчик для списка монстров
+            document.getElementById('npc-input').addEventListener(
+                'input',
+                debounce(async () => {
+                    const npcList = document.getElementById('npc-list');
+                    const input = document.getElementById('npc-input'); // Получаем input элемент
+                    const query = input.value.trim();
+                    if (query.length === 0) {
+                        npcList.innerHTML = '';
+                        return;
+                    }
+                    try {
+                        const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}`);
+                        if (!response.ok) throw new Error('Error fetching data');
+                        const data = await response.json();
+                        npcList.innerHTML = data.map((npc, index) => `<li data-index="${index}" data-json='${JSON.stringify(npc)}'>${npc.name}</li>`).join('');
+
+                        // Добавляем обработчики клика для каждого элемента списка
+                        Array.from(npcList.querySelectorAll('li')).forEach(li => {
+                            li.addEventListener('click', (event) => {
+                                const npcData = JSON.parse(event.target.getAttribute('data-json'));
+                                initiativeManager.fillEditForm(npcData); // Вызываем метод заполнения формы
+                            });
+                        });
+                    } catch (error) {
+                        console.error('Error:', error);
+                        npcList.innerHTML = '<li>Error loading NPCs</li>';
+                    }
+                }, 300) // Задержка 300 мс
+            );
+
         }
     }
 }

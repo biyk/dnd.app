@@ -134,6 +134,52 @@ export async function test() {
         }
     })();
     await sleep(sleeper);
+
+    console.log("=== Поиск монстра и подстановка данных в форму ===");
+    await sleep(sleeper);
+    await (async () => {
+        // Шаг 1: Получаем ссылку на строку поиска
+        const npcInput = document.getElementById('npc-input');
+        const npcList = document.getElementById('npc-list');
+
+        // Шаг 2: Вводим имя монстра в строку поиска
+        const searchQuery = "Гоблин"; // Используйте имя, которое точно есть в базе данных монстров
+        npcInput.value = searchQuery;
+        npcInput.dispatchEvent(new Event('input'));
+
+        // Ожидаем обновления списка монстров после поиска
+        await sleep(1000);
+
+        // Проверяем, что список монстров обновился и содержит результаты
+        if (npcList.innerHTML.trim().length > 0) {
+            console.log("✓ Список монстров обновился");
+
+            // Шаг 3: Клик по первому найденному монстру
+            const firstNpc = npcList.querySelector('li');
+            if (firstNpc) {
+                firstNpc.click();
+                await sleep(sleeper);
+
+                // Шаг 4: Проверка, что данные монстра подставились в форму
+                const nameInput = document.getElementById('new-name');
+                const cdInput = document.getElementById('new-cd');
+                const hpNowInput = document.getElementById('new-hp-now');
+                const hpMaxInput = document.getElementById('new-hp-max');
+                const expInput = document.getElementById('new-experience');
+
+                if (nameInput.value) {
+                    console.log("✓ Данные монстра подставились в форму корректно");
+                } else {
+                    console.error("✗ Данные монстра не подставились в форму");
+                }
+            } else {
+                console.error("✗ Не удалось найти монстра в списке");
+            }
+        } else {
+            console.error("✗ Список монстров пустой или не обновился");
+        }
+    })();
+    console.info("=== Тестирование завершено ===");
 }
 
 function sleep(ms) {
