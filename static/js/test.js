@@ -46,6 +46,7 @@ export async function test() {
 
      //добавление персонажа и тестирование на нем
 
+
      await sleep(200);
         // клик на изменение данных пользователя (здоровье)
      await (async () => {
@@ -66,6 +67,26 @@ export async function test() {
          window.prompt = tempPrompt; // Восстановление оригинальной функции
      })();
     await sleep(200);
+
+
+    // await (async () => {
+    //     let tempPrompt = window.prompt;
+    //     window.prompt = () => "Некорректные данные";
+    //
+    //     const firstCharacterInitSpan = document.querySelector('.editable-value');
+    //     firstCharacterInitSpan.click();
+    //     await sleep(200);
+    //
+    //     const updatedInit = manager.charactersData[0].init;
+    //     if (isNaN(parseFloat(updatedInit))) {
+    //         console.error("✗ Некорректные данные обновили инициативу", updatedInit);
+    //     } else {
+    //         console.log("✓ Некорректные данные не изменили инициативу");
+    //     }
+    //
+    //     window.prompt = tempPrompt; // Восстановление оригинальной функции
+    // })();
+
     await (async () => {
         const current = manager.charactersData.find(c => parseFloat(c.init) === manager.currentCharacterIndex);
         if (current) {

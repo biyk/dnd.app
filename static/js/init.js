@@ -187,12 +187,58 @@ console.log('Before update:', this.charactersData[index]);
         this.sendInit();
     }
 
+        // Метод для переключения видимости формы добавления персонажа
+    toggleAddCharacterForm() {
+        const form = document.getElementById('add-character-form');
+        form.style.display = form.style.display === 'none' || form.style.display === '' ? 'block' : 'none';
+    }
+
+    // Метод проверки уникальности инициативы
+    isUniqueInitiative(init) {
+        return !this.charactersData.some(character => parseFloat(character.init) === parseFloat(init));
+    }
+
+    // Метод добавления нового персонажа
+    addCharacter() {
+        let init = document.getElementById('new-init').value;
+        const name = document.getElementById('new-name').value;
+        const cd = document.getElementById('new-cd').value;
+        const hpNow = document.getElementById('new-hp-now').value;
+        const hpMax = document.getElementById('new-hp-max').value;
+        const surprise = document.getElementById('new-surprise').checked;
+        const npc = document.getElementById('new-npc').checked;
+        const exp = document.getElementById('new-experience').value;
+
+        // Проверяем уникальность инициативы
+        while (!this.isUniqueInitiative(init)) {
+            init = (parseFloat(init) + 0.1).toFixed(1);
+        }
+
+        const newCharacter = {
+            init: init,
+            name: name,
+            cd: cd,
+            hp_now: hpNow,
+            hp_max: hpMax,
+            exp: exp,
+            surprise: surprise ? "true" : "false",
+            npc: npc ? "true" : "false"
+        };
+
+        this.charactersData.push(newCharacter);
+        this.displayCharacters();
+        this.toggleAddCharacterForm();
+        this.sendInit();
+    }
+
     // Добавление обработчиков событий
     addEventListeners() {
         if (typeof document !== "undefined") {
-        document.querySelector(".toggle-form-button.reset").addEventListener("click", this.resetInitiative.bind(this));
-        document.querySelector(".toggle-form-button.next").addEventListener("click", this.nextTurn.bind(this));
-        document.querySelector(".toggle-form-button.prev").addEventListener("click", this.prevTurn.bind(this));
+            document.querySelector(".toggle-form-button.reset").addEventListener("click", this.resetInitiative.bind(this));
+            document.querySelector(".toggle-form-button.next").addEventListener("click", this.nextTurn.bind(this));
+            document.querySelector(".toggle-form-button.prev").addEventListener("click", this.prevTurn.bind(this));
+            document.querySelector(".toggle-form-button.add").addEventListener("click", this.toggleAddCharacterForm.bind(this)); // Новый обработчик
+            document.getElementById('add-character-button').addEventListener("click", this.addCharacter.bind(this)); // Обработчик добавления персонажа
         }
     }
 }
