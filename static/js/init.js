@@ -235,6 +235,24 @@ class InitiativeManager {
             document.querySelector(".toggle-form-button.prev").addEventListener("click", this.prevTurn.bind(this));
             document.querySelector(".toggle-form-button.add").addEventListener("click", this.toggleAddCharacterForm.bind(this)); // Новый обработчик
             document.getElementById('add-character-button').addEventListener("click", this.addCharacter.bind(this)); // Обработчик добавления персонажа
+            document.getElementById('npc-input').addEventListener('input', async () => {
+                   const npcList = document.getElementById('npc-list');
+                   const input = document.getElementById('npc-input'); // Получаем input элемент
+                const query = input.value;
+                if (query.length === 0) {
+                    npcList.innerHTML = '';
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error('Error fetching data');
+                    const data = await response.json();
+                    npcList.innerHTML = data.map(npc => `<li>${npc.name}</li>`).join('');
+                } catch (error) {
+                    console.error('Error:', error);
+                    npcList.innerHTML = '<li>Error loading NPCs</li>';
+                }
+            });
         }
     }
 }

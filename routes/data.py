@@ -16,18 +16,23 @@ data_bp = Blueprint('data', __name__)
 
 @data_bp.route('/data/monsters', methods=['GET'])
 def get_monsters():
-    name_query = request.args.get('name', '').strip()
+    name_query = request.args.get('name', '').strip()  # Получаем запрос пользователя
     if not name_query:
         return jsonify([])
+
+    # Генерируем возможные варианты регистра
+    variants = [name_query.lower(), name_query.capitalize(), name_query.upper()]
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    query = """
+    # Создаём SQL-запрос с несколькими LIKE
+    conditions = " OR ".join(["name LIKE ?"] * len(variants))
+    query = f"""
         SELECT * FROM monsters
-        WHERE name LIKE ? LIMIT 10
+        WHERE {conditions} LIMIT 10
     """
-    cursor.execute(query, (f"%{name_query}%",))
+    cursor.execute(query, tuple(f"%{v}%" for v in variants))
     results = cursor.fetchall()
     conn.close()
 
