@@ -148,7 +148,7 @@ export async function test() {
         npcInput.dispatchEvent(new Event('input'));
 
         // Ожидаем обновления списка монстров после поиска
-        await sleep(1000);
+        await sleep(300 + sleeper);
 
         // Проверяем, что список монстров обновился и содержит результаты
         if (npcList.innerHTML.trim().length > 0) {
