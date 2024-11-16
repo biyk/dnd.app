@@ -1,5 +1,6 @@
 import json
 import os
+import sqlite3
 import time
 from flask import Blueprint, request, jsonify
 
@@ -30,13 +31,41 @@ def save_config(file_name, config_data):
     except IOError:
         return False
 
+def get_db_path():
+    from app import app_path  # импортируем app_path локально, чтобы избежать циклического импорта
+    return os.path.join(app_path, 'data', 'data.db')
+
+def query_main_active_location():
+    db_path = get_db_path()
+    try:
+        connection = sqlite3.connect(db_path)
+        cursor = connection.cursor()
+
+        # SQL-запрос для поиска записи с type='main' и active=1
+        query = """
+        SELECT images_dir FROM locations
+        WHERE type = 'main' AND active = true
+        LIMIT 1;
+        """
+        cursor.execute(query)
+        result = cursor.fetchone()
+        connection.close()
+
+        # Если запись найдена, возвращаем images_dir
+        return result[0] if result else None
+    except sqlite3.Error as e:
+        print(f"Ошибка при работе с базой данных: {e}")
+        return None
+
 # Маршрут для получения начальной конфигурации
+
+
 @config_bp.route('/config', methods=['GET'])
 def get_init_config():
-    init_config = load_config("init")
-    if init_config is None:
-        return jsonify({"error": "init.json not found"}), 404
-    return jsonify(init_config)
+    images_dir = query_main_active_location()
+    if images_dir is None:
+        return jsonify({"error": "No active main location found"}), 404
+    return jsonify({"map": images_dir})
 
 # Маршрут для получения конфигурации карты по названию
 @config_bp.route('/configs/<map_name>', methods=['GET'])
@@ -49,13 +78,9 @@ def get_map_config(map_name):
 # Маршрут для установки конфигурации окружения
 @config_bp.route('/config/ambience', methods=['POST'])
 def set_ambience_config():
-    init_config = load_config("init")
-    if init_config is None:
-        return jsonify({"error": "init.json not found"}), 404
-
     data = request.get_json()
     ambience = data.get('ambience')
-    map_name = init_config.get("map")
+    map_name = query_main_active_location()
     map_config = load_config(map_name)
     if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
@@ -73,11 +98,8 @@ def set_ambience_config():
 @config_bp.route('/config/init', methods=['POST'])
 def update_init_config():
     data = request.get_json()
-    init_config = load_config("init")
-    if init_config is None:
-        return jsonify({"error": "init.json not found"}), 404
 
-    map_name = init_config.get("map")
+    map_name = query_main_active_location()
     map_config = load_config(map_name)
     if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
@@ -101,11 +123,7 @@ def update_init_config():
 # Маршрут для получения начальной конфигурации init
 @config_bp.route('/config/init', methods=['GET'])
 def get_init_map_config():
-    init_config = load_config("init")
-    if init_config is None:
-        return jsonify({"error": "init.json not found"}), 404
-
-    map_name = init_config.get("map")
+    map_name = query_main_active_location()
     map_config = load_config(map_name)
     if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
