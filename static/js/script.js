@@ -1,356 +1,335 @@
-import {getInit, getConfig} from './script/api.js'
-import {createNumberedIcon, setAudio, getParticipantHTML} from './script/helpers.js'
+import { getInit, getConfig } from './script/api.js';
+import { createNumberedIcon, setAudio, getParticipantHTML } from './script/helpers.js';
 
-let mapName = "";  // Глобальная переменная для хранения имени карты
-let mainPolygon = null;  // Переменная для главного полигона
-let map = null;  // Карта
-let polygons = [];  // Массив для хранения всех полигонов
-let polygonPoints = [];  // Точки текущего полигона
-let polygonMarkers = [];  // Маркеры для точек полигона
-let markerCount = 0;  // Счётчик маркеров
-let drawingMode = false;  // Режим рисования
-let lastUpdated = 0;  // Переменная для хранения последней временной метки
-let admin_mode = window.admin_mode || false;
+class MapManager {
+  constructor() {
+    this.mapName = ""; // Имя карты
+    this.mainPolygon = null; // Главный полигон
+    this.map = null; // Карта
+    this.polygons = []; // Массив для полигонов
+    this.polygonPoints = []; // Точки текущего полигона
+    this.polygonMarkers = []; // Маркеры точек полигона
+    this.markerCount = 0; // Счётчик маркеров
+    this.drawingMode = false; // Режим рисования
+    this.lastUpdated = 0; // Последняя временная метка
+    this.admin_mode = window.admin_mode || false; // Админ-режим
+  }
 
+  async initMap() {
+    const init = await getInit();
+    if (!init) return;
 
+    this.mapName = init.map;
+    const config = await getConfig(this.mapName);
+    if (!config) return;
 
-// Функция для инициализации карты
-async function initMap() {
-  const init = await getInit();
-  if (!init) return;
+    this.lastUpdated = config.lastUpdated;
+    this.initializeMap(config);
+    this.createPolygons(config);
+    this.setDrawButtonHandler();
+    this.setReverseButtonHandler(config);
+    this.setMapEventHandlers();
 
-  mapName = init.map;  // Сохраняем имя карты для последующего использования
-  const config = await getConfig(mapName);
-  if (!config) return;
+    if (!this.admin_mode) setInterval(() => this.checkForConfigUpdates(), 1000);
+  }
 
-  lastUpdated = config.lastUpdated;  // Сохраняем временную метку
-  initializeMap(config);  // Инициализация карты
-  createPolygons(config);  // Создание полигонов из конфигурации
-  setDrawButtonHandler();  // Настройка обработчика для кнопки рисования
-  setReverseButtonHandler(config);  // Настройка обработчика для кнопки reverse
-  setMapEventHandlers();  // Обработчики событий для карты
+  initializeMap(config) {
+    const image = `/static/images/${config.image}`;
+    const { width, height, maxLevel, minLevel, orgLevel } = config;
 
-  // Запускаем периодическую проверку на изменения конфигурации
-  if (!admin_mode) setInterval(checkForConfigUpdates, 1000);  // Проверка каждые 10 секунд
-}
+    const tileWidth = 256 * Math.pow(2, orgLevel);
+    const radius = tileWidth / 2 / Math.PI;
+    const rx = width - tileWidth / 2;
+    const ry = -height + tileWidth / 2;
+    const west = -180;
+    const east = (180 / Math.PI) * (rx / radius);
+    const north = 85.05;
+    const south = (360 / Math.PI) * (Math.atan(Math.exp(ry / radius)) - Math.PI / 4);
+    const bounds = [[south, west], [north, east]];
 
-// Функция для инициализации карты
-function initializeMap(config) {
-  const image = `/static/images/${config.image}`;
-  const width = config.width;
-  const height = config.height;
-  const maxLevel = config.maxLevel;
-  const minLevel = config.minLevel;
-  const orgLevel = config.orgLevel;
+    const mapOptions = {
+      maxBounds: bounds,
+      zoomControl: this.admin_mode,
+      dragging: this.admin_mode,
+      scrollWheelZoom: this.admin_mode,
+      doubleClickZoom: this.admin_mode,
+      touchZoom: this.admin_mode,
+      keyboard: this.admin_mode,
+    };
 
-  const tileWidth = 256 * Math.pow(2, orgLevel);
-  const radius = tileWidth / 2 / Math.PI;
-  const rx = width - tileWidth / 2;
-  const ry = -height + tileWidth / 2;
-  const west = -180;
-  const east = (180 / Math.PI) * (rx / radius);
-  const north = 85.05;
-  const south = (360 / Math.PI) * (Math.atan(Math.exp(ry / radius)) - (Math.PI / 4));
-  const bounds = [[south, west], [north, east]];
-  let zoomControl = admin_mode;
-  let dragging =  admin_mode; // Отключение перемещения карты
-  let  scrollWheelZoom =  admin_mode; // Отключение масштабирования колесиком мыши
-  let  doubleClickZoom =  admin_mode; // Отключение масштабирования двойным кликом
-  let  touchZoom =  admin_mode; // Отключение масштабирования касанием
-  let  keyboard = admin_mode; // Отключение управления клавиатурой
+    this.map = L.map('map', mapOptions);
+    L.tileLayer(image + '/{z}-{x}-{y}.jpg', {
+      maxZoom: maxLevel,
+      minZoom: minLevel,
+      noWrap: true,
+      bounds: bounds,
+      attribution: '<a href="https://github.com/oliverheilig/LeafletPano">LeafletPano</a>',
+    }).addTo(this.map);
 
-  // Инициализация карты
-  map = L.map('map', {
-    maxBounds: bounds,
-    zoomControl,
-    dragging,
-    scrollWheelZoom,
-    doubleClickZoom,
-    touchZoom,
-    keyboard,
-  });
-  L.tileLayer(image + '/{z}-{x}-{y}.jpg', {
-    maxZoom: maxLevel,
-    minZoom: minLevel,
-    noWrap: true,
-    bounds: bounds,
-    attribution: '<a href="https://github.com/oliverheilig/LeafletPano">LeafletPano</a>'
-  }).addTo(map);
+    this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
+  }
 
-  map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
-}
+  createPolygons(config) {
+    this.polygons.forEach(polygon => this.map.removeLayer(polygon.layer));
+    this.polygons = [];
 
-// Функция для создания полигонов из конфигурации
-function createPolygons(config) {
-  polygons.forEach(polygon => map.removeLayer(polygon.layer));  // Удаление старых полигонов
-  polygons = [];  // Очистка массива полигонов
+    config.polygons.forEach(polygonData => {
+      const polygonLayer = L.polygon(polygonData.points, {
+        color: 'black',
+        fillColor: 'black',
+        fillOpacity: polygonData.isVisible ? 1.0 : 0.0,
+        opacity: polygonData.isVisible ? 1.0 : 0.0,
+        weight: 1,
+      }).addTo(this.map);
 
-  config.polygons.forEach(polygonData => {
-    const polygonLayer = L.polygon(polygonData.points, {
-      color: 'black',
-      fillColor: 'black',
-      fillOpacity: polygonData.isVisible ? 1.0 : 0.0,
-      opacity: polygonData.isVisible ? 1.0 : 0.0,
-      weight: 1
-    }).addTo(map);
+      polygonLayer.isVisible = polygonData.isVisible;
+      polygonLayer.clickHandler = this.createPolygonClickHandler(polygonLayer);
+      polygonLayer.on('click', polygonLayer.clickHandler);
 
-    polygonLayer.isVisible = polygonData.isVisible;
-    polygonLayer.clickHandler = createPolygonClickHandler(polygonLayer);
-    polygonLayer.on('click', polygonLayer.clickHandler);
-
-    polygons.push({
-      layer: polygonLayer,
-      points: polygonData.points,
-      isVisible: polygonLayer.isVisible
+      this.polygons.push({
+        layer: polygonLayer,
+        points: polygonData.points,
+        isVisible: polygonLayer.isVisible,
+      });
     });
-  });
 
-  // Если в конфигурации есть данные о mainPolygon, создаем его
-  if (config.mainPolygon) {
-    if (mainPolygon) map.removeLayer(mainPolygon);  // Удаляем старый главный полигон, если он существует
-    mainPolygon = L.polygon(config.mainPolygon.points, {
+    if (config.mainPolygon) {
+      if (this.mainPolygon) this.map.removeLayer(this.mainPolygon);
+      this.mainPolygon = L.polygon(config.mainPolygon.points, {
+        color: 'black',
+        fillColor: 'black',
+        fillOpacity: 1.0,
+        weight: 3,
+      }).addTo(this.map);
+    }
+  }
+
+  createPolygonClickHandler(polygonLayer) {
+    if (this.admin_mode) {
+      return (e) => {
+        if (e.originalEvent.ctrlKey) {
+          this.map.removeLayer(polygonLayer);
+          this.polygons = this.polygons.filter(p => p.layer !== polygonLayer);
+          this.sendPolygonsData();
+        } else {
+          polygonLayer.isVisible = !polygonLayer.isVisible;
+          polygonLayer.setStyle({
+            fillOpacity: polygonLayer.isVisible ? 1.0 : 0.0,
+            opacity: polygonLayer.isVisible ? 1.0 : 0.0,
+          });
+          this.sendPolygonsData();
+        }
+      };
+    }
+  }
+
+  sendPolygonsData() {
+    if (!this.admin_mode) return;
+
+    const polygonsData = this.polygons.map(polygon => ({
+      points: polygon.points,
+      isVisible: polygon.layer.isVisible,
+    }));
+
+    const center = this.map.getCenter();
+    const zoomLevel = this.map.getZoom();
+
+    fetch('/api/polygons', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        mapName: this.mapName,
+        polygons: polygonsData,
+        mainPolygon: this.mainPolygon ? { points: this.mainPolygon.getLatLngs() } : null,
+        mapState: {
+          center: { lat: center.lat, lng: center.lng },
+          zoom: zoomLevel,
+        },
+      }),
+    })
+      .then(response => response.json())
+      .then(data => console.log("Data sent successfully:", data))
+      .catch(error => console.error("Error sending polygons data:", error));
+  }
+
+  setDrawButtonHandler() {
+    const drawButton = document.getElementById('draw-button');
+    if (!drawButton) return;
+
+    drawButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.drawingMode = !this.drawingMode;
+      drawButton.textContent = this.drawingMode ? "Finish Drawing" : "Draw Polygon";
+
+      if (this.drawingMode) {
+        this.setPolygonsOpacity(0.6);
+        this.setPolygonClickability(false);
+      } else {
+        this.setPolygonsOpacity(1.0);
+        this.setPolygonClickability(true);
+
+        if (this.polygonPoints.length > 2) {
+          this.createNewPolygon();
+          this.sendPolygonsData();
+        }
+      }
+    });
+  }
+
+  setReverseButtonHandler(config) {
+    const reverseButton = document.getElementById('reverse-button');
+    if (!reverseButton) return;
+
+    reverseButton.addEventListener('click', () => {
+      if (this.mainPolygon) {
+        this.updateMainPolygon(config);
+        this.toggleMainPolygonVisibility();
+      } else {
+        this.createMainPolygon(config);
+      }
+    });
+  }
+
+  createNewPolygon() {
+    const polygonLayer = L.polygon(this.polygonPoints, {
       color: 'black',
       fillColor: 'black',
       fillOpacity: 1.0,
-      weight: 3
-    }).addTo(map);
+      weight: 1,
+    }).addTo(this.map);
+
+    polygonLayer.isVisible = true;
+    polygonLayer.clickHandler = this.createPolygonClickHandler(polygonLayer);
+    polygonLayer.on('click', polygonLayer.clickHandler);
+
+    this.polygons.push({
+      layer: polygonLayer,
+      points: this.polygonPoints,
+      isVisible: polygonLayer.isVisible,
+    });
+
+    this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
+    this.polygonMarkers = [];
+    this.polygonPoints = [];
+    this.markerCount = 0;
   }
-}
 
-// Функция для создания обработчика клика для полигона
-function createPolygonClickHandler(polygonLayer) {
-  if (admin_mode)
-  return function (e) {
-    if (e.originalEvent.ctrlKey) {
-      map.removeLayer(this);
-      polygons = polygons.filter(p => p.layer !== this);
-      sendPolygonsData();
+  toggleMainPolygonVisibility() {
+    if (this.map.hasLayer(this.mainPolygon)) {
+      this.map.removeLayer(this.mainPolygon);
     } else {
-      this.isVisible = !this.isVisible;
-      this.setStyle({
-        fillOpacity: this.isVisible ? 1.0 : 0.0,
-        opacity: this.isVisible ? 1.0 : 0.0
-      });
-      sendPolygonsData();
+      this.mainPolygon.addTo(this.map);
     }
-  };
-}
+  }
 
-// Функция для отправки данных о полигонах на сервер
-function sendPolygonsData() {
+  createMainPolygon(config) {
+    const bounds = this.map.getBounds();
+    const polygonPoints = [
+      [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+      [bounds.getSouthWest().lat, bounds.getNorthEast().lng],
+      [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+      [bounds.getNorthEast().lat, bounds.getSouthWest().lng],
+    ];
 
-  if (!admin_mode) return;
+    let holes = [];
+    config.polygons.forEach(polygonData => {
+      holes.push(polygonData.points);
+    });
 
-  const polygonsData = polygons.map(polygon => ({
-    points: polygon.points,
-    isVisible: polygon.layer.isVisible
-  }));
+    this.mainPolygon = L.polygon([polygonPoints, holes], {
+      color: 'black',
+      fillColor: 'black',
+      fillOpacity: 1,
+      weight: 3,
+    }).addTo(this.map);
+  }
 
-  const center = map.getCenter();
-  const zoomLevel = map.getZoom();
+  updateMainPolygon(config) {
+    let holes = [];
+    config.polygons.forEach(polygonData => {
+      holes.push(polygonData.points);
+    });
+    this.mainPolygon.setLatLngs([this.mainPolygon.getLatLngs()[0], holes]);
+  }
 
-  fetch('/api/polygons', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      mapName: mapName,
-      polygons: polygonsData,
-      mainPolygon: mainPolygon ? {
-        points: mainPolygon.getLatLngs()
-      } : null,
-      mapState: {
-        center: { lat: center.lat, lng: center.lng },
-        zoom: zoomLevel
+  async checkForConfigUpdates() {
+    const config = await getConfig(this.mapName);
+    this.updateInfoBar(config);
+
+    if (config && config.lastUpdated !== this.lastUpdated) {
+      this.lastUpdated = config.lastUpdated;
+      this.createPolygons(config);
+      setAudio(config);
+      startCountdown(config.timer);
+      updateSkullColor(config.init.rating);
+
+      this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
+      console.log("Map data updated due to configuration change.");
+    }
+  }
+
+    setPolygonsOpacity(opacity) {
+    this.polygons.forEach(polygon => polygon.layer.setStyle({ fillOpacity: opacity, opacity: opacity }));
+  }
+
+    setPolygonClickability(clickable) {
+    this.polygons.forEach(polygon => {
+      if (clickable) {
+        polygon.layer.on('click', polygon.layer.clickHandler);
+      } else {
+        polygon.layer.off('click', polygon.layer.clickHandler);
       }
-    })
-  })
-  .then(response => response.json())
-  .then(data => console.log("Data sent successfully:", data))
-  .catch(error => console.error("Error sending polygons data:", error));
-}
+    });
+  }
 
-// Функция для настройки кнопки рисования
-function setDrawButtonHandler() {
-  const drawButton = document.getElementById('draw-button');
-  if (!drawButton) return;
-  drawButton.addEventListener('click', () => {
-    drawingMode = !drawingMode;
-    drawButton.textContent = drawingMode ? "Finish Drawing" : "Draw Polygon";
+  setMapEventHandlers() {
+    this.map.on('zoomend', ()=>{
+      this.sendPolygonsData();
+    });
 
-    if (drawingMode) {
-      setPolygonsOpacity(0.6);
-      setPolygonClickability(false);
-    } else {
-      setPolygonsOpacity(1.0);
-      setPolygonClickability(true);
+    this.map.on('moveend', ()=>{
+      this.sendPolygonsData()
+    });
 
-      if (polygonPoints.length > 2) {
-        createNewPolygon();
-        sendPolygonsData();
+    this.map.on('click', (e) => {
+      if (this.drawingMode) {
+        this.markerCount += 1;
+        this.polygonPoints.push([e.latlng.lat, e.latlng.lng]);
+
+        const marker = L.marker([e.latlng.lat, e.latlng.lng], { icon: createNumberedIcon(this.markerCount) }).addTo(this.map);
+        this.polygonMarkers.push(marker);
       }
-    }
-  });
-}
+    });
+  }
 
-// Функция для настройки кнопки reverse
-function setReverseButtonHandler(config) {
-  const reverseButton = document.getElementById('reverse-button');
-  if (!reverseButton) return;
-  reverseButton.addEventListener('click', () => {
-    if (mainPolygon) {
-      updateMainPoligon(config)
-      toggleMainPolygonVisibility();
-    } else {
-      createMainPolygon(config);
-    }
-  });
-}
+  updateInfoBar(data) {
+    const infoBar = document.getElementById('info-bar');
+    if (!infoBar) return;
+    const round = data.init.round;
+    const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
+    const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
+    const participants = data.init.all;
 
-// Функция для создания нового полигона
-function createNewPolygon() {
-  const polygonLayer = L.polygon(polygonPoints, {
-    color: 'black',
-    fillColor: 'black',
-    fillOpacity: 1.0,
-    weight: 1
-  }).addTo(map);
+    // Сортируем участников по инициативе
+    const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
 
-  polygonLayer.isVisible = true;
-  polygonLayer.clickHandler = createPolygonClickHandler(polygonLayer);
-  polygonLayer.on('click', polygonLayer.clickHandler);
+    // Находим текущий и следующий ход
+    const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
+    const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
+    const current = sortedParticipants[currentIndex] || null;
+    const next = sortedParticipants[nextIndex] || null;
 
-  polygons.push({
-    layer: polygonLayer,
-    points: polygonPoints,
-    isVisible: polygonLayer.isVisible
-  });
 
-  polygonMarkers.forEach(marker => map.removeLayer(marker));
-  polygonMarkers = [];
-  polygonPoints = [];
-  markerCount = 0;
-}
-
-// Функция для переключения видимости главного полигона
-function toggleMainPolygonVisibility() {
-  if (map.hasLayer(mainPolygon)) {
-    map.removeLayer(mainPolygon);
-  } else {
-    mainPolygon.addTo(map);
+    // Обновляем информационную строку
+    infoBar.innerHTML = `
+      Раунд: <span>${round}</span>,
+      Ход: ${current ? getParticipantHTML(current) : '---'},
+      Следующий: ${next ? getParticipantHTML(next) : '---'}
+    `;
   }
 }
 
-// Функция для создания главного полигона
-function createMainPolygon(config) {
-  const bounds = map.getBounds();
-  const polygonPoints = [
-    [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
-    [bounds.getSouthWest().lat, bounds.getNorthEast().lng],
-    [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
-    [bounds.getNorthEast().lat, bounds.getSouthWest().lng]
-  ];
-
-  let holes = [];
-  config.polygons.forEach(polygonData => {
-    holes.push(polygonData.points);
-  });
-
-  mainPolygon = L.polygon([polygonPoints, holes], {
-    color: 'black',
-    fillColor: 'black',
-    fillOpacity: 1,
-    weight: 3
-  }).addTo(map);
-}
-
-function updateMainPoligon(config){
-  let holes = [];
-  config.polygons.forEach(polygonData => {
-    holes.push(polygonData.points);
-  });
-  mainPolygon.setLatLngs([mainPolygon.getLatLngs()[0], holes]);
-}
-
-// Функция для проверки обновлений конфигурации
-async function checkForConfigUpdates() {
-  const config = await getConfig(mapName);
-  updateInfoBar(config);
-  if (config && config.lastUpdated !== lastUpdated) {
-    lastUpdated = config.lastUpdated;  // Обновляем временную метку
-    createPolygons(config);  // Обновляем полигоны
-    setAudio(config)
-    startCountdown(config.timer);
-    updateSkullColor(config.init.rating);
-
-    map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);  // Обновляем центр и зум карты
-    console.log("Map data updated due to configuration change.");
-  }
-}
-
-// Функция для установки прозрачности всех полигонов
-function setPolygonsOpacity(opacity) {
-  polygons.forEach(p => p.layer.setStyle({ fillOpacity: opacity }));
-}
-
-// Функция для включения/отключения кликов на полигонах
-function setPolygonClickability(enabled) {
-  polygons.forEach(p => {
-    if (enabled) {
-      p.layer.on('click', p.clickHandler);
-    } else {
-      p.layer.off('click', p.clickHandler);
-    }
-  });
-}
-
-// Функция для обработки событий карты
-function setMapEventHandlers() {
-  map.on('zoomend', sendPolygonsData);
-  map.on('moveend', sendPolygonsData);
-
-  map.on('click', (e) => {
-    if (drawingMode) {
-      markerCount += 1;
-      polygonPoints.push([e.latlng.lat, e.latlng.lng]);
-
-      const marker = L.marker([e.latlng.lat, e.latlng.lng], { icon: createNumberedIcon(markerCount) }).addTo(map);
-      polygonMarkers.push(marker);
-    }
-  });
-}
-
-
-
-
-function updateInfoBar(data) {
-  const infoBar = document.getElementById('info-bar');
-  if (!infoBar) return;
-  const round = data.init.round;
-  const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
-  const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
-  const participants = data.init.all;
-
-  // Сортируем участников по инициативе
-  const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
-
-  // Находим текущий и следующий ход
-  const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
-  const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
-  const current = sortedParticipants[currentIndex] || null;
-  const next = sortedParticipants[nextIndex] || null;
-
-
-  // Обновляем информационную строку
-  infoBar.innerHTML = `
-    Раунд: <span>${round}</span>,
-    Ход: ${current ? getParticipantHTML(current) : '---'},
-    Следующий: ${next ? getParticipantHTML(next) : '---'}
-  `;
-}
-
-// Пример вызова функции
-
-// Запуск инициализации карты
-initMap();
+const mapManager = new MapManager();
+mapManager.initMap();

@@ -10,5 +10,6 @@
 
     // Показываем выбранную вкладку и активируем кнопку
     document.getElementById(tabId).classList.add('active');
+    document.getElementById(tabId+'-controls').classList.add('active');
     event.target.classList.add('active');
   }
