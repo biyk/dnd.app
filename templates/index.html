@@ -10,6 +10,7 @@
 
 </head>
 <body>
+<div id="info-bar" ></div>
 
 <div id="map" style="background-color: black;"></div>
 <audio id="audio" src="/static/audio/0fICWTcQEnk.mp3" controls loop="true"></audio>
@@ -21,7 +22,7 @@
 <script src="https://unpkg.com/@turf/turf"></script>
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-<script src="{{ url_for('static', filename='js/script.js') }}" async defer></script>
+<script type="module" src="{{ url_for('static', filename='js/script.js') }}" async defer></script>
 <script src="{{ url_for('static', filename='js/timer.js') }}" async defer></script>
 <script src="{{ url_for('static', filename='js/skull.js') }}" async defer></script>
 <script>

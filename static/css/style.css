@@ -226,24 +226,39 @@ position: absolute;
 }
 
 
-        #npc-list {
-            margin-top: 10px;
-            list-style-type: none;
-            padding: 0;
-        }
-        #npc-list li {
-            padding: 8px;
-            background: #f9f9f9;
-            margin-bottom: 5px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        #npc-list li:hover {
-            background: #f1f1f1;
-        }
-        input[type="text"]#npc-input {
-            padding: 8px;
-            width: 300px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
+#npc-list {
+    margin-top: 10px;
+    list-style-type: none;
+    padding: 0;
+}
+#npc-list li {
+    padding: 8px;
+    background: #f9f9f9;
+    margin-bottom: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+#npc-list li:hover {
+    background: #f1f1f1;
+}
+input[type="text"]#npc-input {
+    padding: 8px;
+    width: 300px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#info-bar {
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    position: absolute;
+    top: 10px;
+    left: 50px;
+    z-index: 999;
+}
+#info-bar span {
+    font-weight: bold;
+    padding: 0 5px;
+}

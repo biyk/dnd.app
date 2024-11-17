@@ -1,4 +1,4 @@
-export async function test() {
+export async function init() {
     console.log("=== Начало тестирования ===");
     let sleeper = 200;
     let manager = initiativeManager;
@@ -97,93 +97,88 @@ export async function test() {
 
      console.log("=== определение текущего персонажа ===");
      await sleep(sleeper);
-    await (async () => {
-        const current = manager.charactersData.find(c => parseFloat(c.init) === manager.currentCharacterIndex);
-        if (current) {
-            console.log("✓ Текущий персонаж корректно определен");
-        } else {
-            console.error("✗ Ошибка в определении текущего персонажа");
-        }
-    })();
+     await (async () => {
+         const current = manager.charactersData.find(c => c.init.toString() === manager.currentCharacterIndex);
+         if (current) {
+             console.log("✓ Текущий персонаж корректно определен");
+         } else {
+             console.error("✗ Ошибка в определении текущего персонажа");
+         }
+     })();
 
-    console.log("=== Проверка восстановления здоровья ===");
-    await sleep(sleeper);
-    await (async () => {
-        const testCharacter = manager.charactersData[0];
-        testCharacter.hp_now = 1; // Умышленно уменьшаем здоровье
-        manager.healCharacter(0);
-        await sleep(sleeper);
+     console.log("=== Проверка восстановления здоровья ===");
+     await sleep(sleeper);
+     await (async () => {
+         const testCharacter = manager.charactersData[0];
+         testCharacter.hp_now = 1; // Умышленно уменьшаем здоровье
+         manager.healCharacter(0);
+         await sleep(sleeper);
 
-        if (testCharacter.hp_now === testCharacter.hp_max) {
-            console.log("✓ Восстановление здоровья работает");
-        } else {
-            console.error("✗ Восстановление здоровья не работает");
-        }
+         if (testCharacter.hp_now === testCharacter.hp_max) {
+             console.log("✓ Восстановление здоровья работает");
+         } else {
+             console.error("✗ Восстановление здоровья не работает");
+         }
 
 
-        console.log("=== Проверка удаления персонажа ===");
-        await sleep(sleeper);
-        const initialLength = manager.charactersData.length;
-        manager.deleteCharacter(0);
-        await sleep(sleeper);
+         console.log("=== Проверка удаления персонажа ===");
+         await sleep(sleeper);
+         const initialLength = manager.charactersData.length;
+         manager.deleteCharacter(0);
+         await sleep(sleeper);
 
-        if (manager.charactersData.length === initialLength - 1) {
-            console.log("✓ Удаление персонажа работает");
-        } else {
-            console.error("✗ Удаление персонажа не работает");
-        }
-    })();
-    await sleep(sleeper);
+         if (manager.charactersData.length === initialLength - 1) {
+             console.log("✓ Удаление персонажа работает");
+         } else {
+             console.error("✗ Удаление персонажа не работает");
+         }
+     })();
+     await sleep(sleeper);
 
-    console.log("=== Поиск монстра и подстановка данных в форму ===");
-    await sleep(sleeper);
-    await (async () => {
-        // Шаг 1: Получаем ссылку на строку поиска
-        const npcInput = document.getElementById('npc-input');
-        const npcList = document.getElementById('npc-list');
+     console.log("=== Поиск монстра и подстановка данных в форму ===");
+     await (async () => {
+         // Шаг 1: Получаем ссылку на строку поиска
+         const npcInput = document.getElementById('npc-input');
+         const npcList = document.getElementById('npc-list');
+         // Шаг 2: Вводим имя монстра в строку поиска
+         const searchQuery = "Гоблин"; // Используйте имя, которое точно есть в базе данных монстров
+         npcInput.value = searchQuery;
+         npcInput.dispatchEvent(new Event('input'));
+         // Ожидаем обновления списка монстров после поиска
+         await sleep(300 + sleeper);
+         // Проверяем, что список монстров обновился и содержит результаты
+         if (npcList.innerHTML.trim().length > 0) {
+             console.log("✓ Список монстров обновился");
+             // Шаг 3: Клик по первому найденному монстру
+             const firstNpc = npcList.querySelector('li');
+             if (firstNpc) {
+                 firstNpc.click();
+                 await sleep(sleeper);
+                 // Шаг 4: Проверка, что данные монстра подставились в форму
+                 const nameInput = document.getElementById('new-name');
+                 const cdInput = document.getElementById('new-cd');
+                 const hpNowInput = document.getElementById('new-hp-now');
+                 const hpMaxInput = document.getElementById('new-hp-max');
+                 const expInput = document.getElementById('new-experience');
+                 if (nameInput.value) {
+                     console.log("✓ Данные монстра подставились в форму корректно");
+                 } else {
+                     console.error("✗ Данные монстра не подставились в форму");
+                 }
+             } else {
+                 console.error("✗ Не удалось найти монстра в списке");
+             }
+         } else {
+             console.error("✗ Список монстров пустой или не обновился");
+         }
+     })();
 
-        // Шаг 2: Вводим имя монстра в строку поиска
-        const searchQuery = "Гоблин"; // Используйте имя, которое точно есть в базе данных монстров
-        npcInput.value = searchQuery;
-        npcInput.dispatchEvent(new Event('input'));
-
-        // Ожидаем обновления списка монстров после поиска
-        await sleep(300 + sleeper);
-
-        // Проверяем, что список монстров обновился и содержит результаты
-        if (npcList.innerHTML.trim().length > 0) {
-            console.log("✓ Список монстров обновился");
-
-            // Шаг 3: Клик по первому найденному монстру
-            const firstNpc = npcList.querySelector('li');
-            if (firstNpc) {
-                firstNpc.click();
-                await sleep(sleeper);
-
-                // Шаг 4: Проверка, что данные монстра подставились в форму
-                const nameInput = document.getElementById('new-name');
-                const cdInput = document.getElementById('new-cd');
-                const hpNowInput = document.getElementById('new-hp-now');
-                const hpMaxInput = document.getElementById('new-hp-max');
-                const expInput = document.getElementById('new-experience');
-
-                if (nameInput.value) {
-                    console.log("✓ Данные монстра подставились в форму корректно");
-                } else {
-                    console.error("✗ Данные монстра не подставились в форму");
-                }
-            } else {
-                console.error("✗ Не удалось найти монстра в списке");
-            }
-        } else {
-            console.error("✗ Список монстров пустой или не обновился");
-        }
-    })();
-    console.info("=== Тестирование завершено ===");
+     await sleep(sleeper);
+     console.info("=== Тестирование завершено ===");
 }
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-window.test = test;
+window.test = init;

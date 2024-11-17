@@ -1,3 +1,6 @@
+import {getInit, getConfig} from './script/api.js'
+import {createNumberedIcon, setAudio, getParticipantHTML} from './script/helpers.js'
+
 let mapName = "";  // Глобальная переменная для хранения имени карты
 let mainPolygon = null;  // Переменная для главного полигона
 let map = null;  // Карта
@@ -8,27 +11,8 @@ let markerCount = 0;  // Счётчик маркеров
 let drawingMode = false;  // Режим рисования
 let lastUpdated = 0;  // Переменная для хранения последней временной метки
 let admin_mode = window.admin_mode || false;
-// Функция для получения начальной конфигурации
-async function getInit() {
-  const response = await fetch('/api/config');
-  if (response.ok) {
-    return response.json();
-  } else {
-    console.error("Error fetching initial config");
-    return null;
-  }
-}
 
-// Функция для получения конфигурации карты по имени
-async function getConfig(mapName) {
-  const response = await fetch(`/api/configs/${mapName}`);
-  if (response.ok) {
-    return response.json();
-  } else {
-    console.error(`Error fetching map config for ${mapName}`);
-    return null;
-  }
-}
+
 
 // Функция для инициализации карты
 async function initMap() {
@@ -69,9 +53,22 @@ function initializeMap(config) {
   const south = (360 / Math.PI) * (Math.atan(Math.exp(ry / radius)) - (Math.PI / 4));
   const bounds = [[south, west], [north, east]];
   let zoomControl = admin_mode;
+  let dragging =  admin_mode; // Отключение перемещения карты
+  let  scrollWheelZoom =  admin_mode; // Отключение масштабирования колесиком мыши
+  let  doubleClickZoom =  admin_mode; // Отключение масштабирования двойным кликом
+  let  touchZoom =  admin_mode; // Отключение масштабирования касанием
+  let  keyboard = admin_mode; // Отключение управления клавиатурой
 
   // Инициализация карты
-  map = L.map('map', { maxBounds: bounds,zoomControl });
+  map = L.map('map', {
+    maxBounds: bounds,
+    zoomControl,
+    dragging,
+    scrollWheelZoom,
+    doubleClickZoom,
+    touchZoom,
+    keyboard,
+  });
   L.tileLayer(image + '/{z}-{x}-{y}.jpg', {
     maxZoom: maxLevel,
     minZoom: minLevel,
@@ -122,6 +119,7 @@ function createPolygons(config) {
 
 // Функция для создания обработчика клика для полигона
 function createPolygonClickHandler(polygonLayer) {
+  if (admin_mode)
   return function (e) {
     if (e.originalEvent.ctrlKey) {
       map.removeLayer(this);
@@ -275,26 +273,17 @@ function updateMainPoligon(config){
   mainPolygon.setLatLngs([mainPolygon.getLatLngs()[0], holes]);
 }
 
-function setAudio(config) {
-  const audio = document.getElementById('audio');
-  let src = '/static/audio/'+config.ambience+'.mp3';
-  console.log(src);
-  console.log(audio.src);
-  if (audio.src.indexOf(src)==-1) {
-  audio.src = src;
-  audio.play();
-  }
-}
-
 // Функция для проверки обновлений конфигурации
 async function checkForConfigUpdates() {
   const config = await getConfig(mapName);
+  updateInfoBar(config);
   if (config && config.lastUpdated !== lastUpdated) {
     lastUpdated = config.lastUpdated;  // Обновляем временную метку
     createPolygons(config);  // Обновляем полигоны
     setAudio(config)
     startCountdown(config.timer);
     updateSkullColor(config.init.rating);
+
     map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);  // Обновляем центр и зум карты
     console.log("Map data updated due to configuration change.");
   }
@@ -332,17 +321,36 @@ function setMapEventHandlers() {
   });
 }
 
-// Функция для создания кастомного маркера
-function createNumberedIcon(number) {
-  return L.divIcon({
-    className: 'numbered-icon',
-    iconSize: [10, 10],
-    html: `<div style="display: flex; align-items: center;">
-             <div style="min-width: 6px; height: 6px; background-color: red; border-radius: 50%;"></div>
-             <span style="color:red; margin-left: 5px; font-size: 10px;">${number}</span>
-           </div>`
-  });
+
+
+
+function updateInfoBar(data) {
+  const infoBar = document.getElementById('info-bar');
+  if (!infoBar) return;
+  const round = data.init.round;
+  const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
+  const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
+  const participants = data.init.all;
+
+  // Сортируем участников по инициативе
+  const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
+
+  // Находим текущий и следующий ход
+  const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
+  const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
+  const current = sortedParticipants[currentIndex] || null;
+  const next = sortedParticipants[nextIndex] || null;
+
+
+  // Обновляем информационную строку
+  infoBar.innerHTML = `
+    Раунд: <span>${round}</span>,
+    Ход: ${current ? getParticipantHTML(current) : '---'},
+    Следующий: ${next ? getParticipantHTML(next) : '---'}
+  `;
 }
+
+// Пример вызова функции
 
 // Запуск инициализации карты
 initMap();

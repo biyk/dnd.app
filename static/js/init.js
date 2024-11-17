@@ -72,6 +72,14 @@ class InitiativeManager {
         this.displayCharactersAndSendInit();
     }
 
+    updateCharacterPropertyInit(index, property, value) {
+        while (!this.isUniqueInitiative(value)) {
+            value = (parseFloat(value) + 0.1).toFixed(1);
+        }
+        this.charactersData[index][property] = value;
+        this.displayCharactersAndSendInit();
+    }
+
     // Переход к следующему персонажу
     nextTurn() {
         let characters = this.charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
@@ -129,7 +137,7 @@ class InitiativeManager {
             row.classList.add(character.npc === 'true' ? 'character-npc' : 'character-player');
 
             const nameSpan = createEditableSpan(`Имя: ${character.name}`, "name", index, this.updateCharacterProperty.bind(this));
-            const initSpan = createEditableSpan(`Init: ${character.init}`, "init", index, this.updateCharacterProperty.bind(this));
+            const initSpan = createEditableSpan(`Init: ${character.init}`, "init", index, this.updateCharacterPropertyInit.bind(this));
             const cdSpan = createEditableSpan(`КД: ${character.cd}`, "cd", index, this.updateCharacterProperty.bind(this));
             const hpSpan = createEditableSpan(`HP: ${character.hp_now}`, "hp_now", index, this.updateCharacterProperty.bind(this),`/ ${character.hp_max}`);
             const expSpanTitle = character.npc === 'true' ? 'DNG' : 'LVL';

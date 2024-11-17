@@ -1,5 +1,5 @@
 const assert = require('assert');
-const InitiativeManager = require('../static/js/init2');
+const InitiativeManager = require('../static/js/init');
 
 describe('InitiativeManager', function() {
     let manager;
