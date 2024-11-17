@@ -56,12 +56,15 @@ class MapManager {
 
         const mapOptions = {
             maxBounds: bounds,
-            zoomControl: this.admin_mode,
+              zoomControl: this.admin_mode,
+            /*
             dragging: this.admin_mode,
+
             scrollWheelZoom: this.admin_mode,
             doubleClickZoom: this.admin_mode,
             touchZoom: this.admin_mode,
             keyboard: this.admin_mode,
+             */
         };
 
         this.map = L.map('map', mapOptions);

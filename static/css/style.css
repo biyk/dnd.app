@@ -252,14 +252,36 @@ input[type="text"]#npc-input {
     color: #fff;
     padding: 10px;
     text-align: center;
-    font-size: 14px;
+    font-size: 14px; /* Стандартный размер шрифта */
     position: absolute;
     top: 10px;
-    left: 50px;
+    left: 50%; /* Центрирование по горизонтали */
+    transform: translateX(-50%); /* Для точного центрирования */
     z-index: 999;
     background-color: rgba(0, 0, 0, 0.318);
+    width: auto;
+    max-width: 100%; /* Убедитесь, что ширина не выходит за пределы экрана */
+    box-sizing: border-box; /* Чтобы padding не выходил за пределы */
 }
+
 #info-bar span {
     font-weight: bold;
     padding: 0 5px;
+}
+
+/* Адаптивные изменения для мобильных устройств */
+@media (max-width: 768px) {
+    #info-bar {
+        font-size: 24px; /* Уменьшаем размер шрифта на мобильных */
+        padding: 8px; /* Уменьшаем отступы */
+        left: 50%; /* Оставляем центрирование */
+        transform: translateX(-50%); /* Для точного центрирования */
+    }
+}
+
+@media (max-width: 480px) {
+    #info-bar {
+        font-size: 10px; /* Еще меньше шрифт для очень маленьких экранов */
+        padding: 6px; /* Меньше отступов */
+    }
 }
