@@ -199,7 +199,7 @@ body {
 }
 
 .timer-container {
-        margin: auto;
+    margin: auto;
     width: 200px;
     position: absolute;
     top: 0px;
@@ -215,8 +215,7 @@ body {
     font-weight: 900;
 }
 
-#skull {
-position: absolute;
+#skull {position: absolute;
     font-size: 70px;
     color: green;
     transition: color 0.5s ease;
@@ -284,4 +283,33 @@ input[type="text"]#npc-input {
         font-size: 10px; /* Еще меньше шрифт для очень маленьких экранов */
         padding: 6px; /* Меньше отступов */
     }
+}
+
+/* Скрываем оригинальные радио-кнопки */
+input[type="radio"][name="ambience"] {
+    display: none;
+}
+/* Стиль для меток, чтобы выглядели как кнопки */
+#ambience-tab label {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 5px;
+    background-color: #f0f0f0;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+/* Стиль для меток при наведении */
+#ambience-tab label:hover {
+    background-color: #e0e0e0;
+    border-color: #bbb;
+}
+/* Стиль для выбранной кнопки */
+input[type="radio"]:checked + label {
+    background-color: #4caf50;
+    color: #4caf50;
+    border-color: #4caf50;
 }
