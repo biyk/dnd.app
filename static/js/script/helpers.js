@@ -52,4 +52,51 @@ export function getParticipantHTML(participant) {
     const { name, hp_now, hp_max } = participant;
     const color = getHealthColor(hp_now, hp_max);
     return `<span style="color: ${color};">${name}</span>`;
-  }
+}
+
+export function setDrawButtonHandler() {
+    const drawButton = document.getElementById('draw-button');
+    if (!drawButton) return;
+    drawButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.drawingMode = !this.drawingMode;
+        drawButton.textContent = this.drawingMode ? "Finish Drawing" : "Draw Polygon";
+        if (this.drawingMode) {
+            this.setPolygonsOpacity(0.6);
+            this.setPolygonClickability(false);
+        } else {
+            this.setPolygonsOpacity(1.0);
+            this.setPolygonClickability(true);
+            if (this.polygonPoints.length > 2) {
+                this.createNewPolygon();
+                this.sendPolygonsData();
+            }
+        }
+    });
+}
+
+ export function updateInfoBar(data) {
+        const infoBar = document.getElementById('info-bar');
+        if (!infoBar) return;
+        const round = data.init.round;
+        const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
+        const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
+        const participants = data.init.all;
+
+        // Сортируем участников по инициативе
+        const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
+
+        // Находим текущий и следующий ход
+        const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
+        const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
+        const current = sortedParticipants[currentIndex] || null;
+        const next = sortedParticipants[nextIndex] || null;
+
+
+        // Обновляем информационную строку
+        infoBar.innerHTML = `
+      Раунд: <span>${round}</span>,
+      Ход: ${current ? getParticipantHTML(current) : '---'},
+      Следующий: ${next ? getParticipantHTML(next) : '---'}
+    `;
+    }
