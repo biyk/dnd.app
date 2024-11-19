@@ -4,6 +4,14 @@
     display: none;
 }
 
+.location-span{
+     width: 90%;
+    background-color: wheat;
+    display: inline-block;
+}
+
 .location-remove {
-    margin-left: 10px;
+    float: right;
+    display: inline-block;
+    width: 5%;
 }

@@ -34,6 +34,7 @@ export async function loadSubLocations() {
                 // Первый span: название локации
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = location.name;
+                nameSpan.classList.add('location-span');
                 nameSpan.addEventListener('click', () => this.showEditPopup(location));
 
                 // Второй span: иконка крестика
