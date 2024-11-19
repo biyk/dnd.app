@@ -68,11 +68,20 @@ def get_init_config():
     return jsonify({"map": images_dir})
 
 # Маршрут для получения конфигурации карты по названию
+@config_bp.route('/configs', defaults={'map_name': None}, methods=['GET'])
 @config_bp.route('/configs/<map_name>', methods=['GET'])
 def get_map_config(map_name):
+    # Если map_name не указан, используем значение из query_main_active_location
+    if not map_name:
+        map_name = query_main_active_location()
+        if map_name is None:
+            return jsonify({"error": "No active main location found"}), 404
+
+    # Загружаем конфигурацию
     map_config = load_config(map_name)
     if map_config is None:
         return jsonify({"error": f"{map_name}.json not found"}), 404
+
     return jsonify(map_config)
 
 # Маршрут для установки конфигурации окружения

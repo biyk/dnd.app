@@ -3,6 +3,11 @@ async function loadAmbienceRadios() {
     try {
         const response = await fetch('/static/audio/ambience.json');
         const data = await response.json();
+
+        let config = await fetch('/api/configs');
+        let idata = await config.json();
+        let ambience = idata.ambience;
+
         const container = document.getElementById('ambience-tab');
         Object.entries(data).forEach(([key, value]) => {
             const radio = document.createElement('input');
@@ -10,6 +15,7 @@ async function loadAmbienceRadios() {
             radio.name = 'ambience';
             radio.value = key;
             radio.id = `radio-${key}`;
+            radio.checked = key===ambience;
             const label = document.createElement('label');
             label.htmlFor = `radio-${key}`;
             label.textContent = value;
@@ -32,6 +38,8 @@ async function loadAmbienceRadios() {
                 }
             });
         });
+
+
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
     }
