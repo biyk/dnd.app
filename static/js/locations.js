@@ -61,6 +61,23 @@ class LocationManager {
     async loadSubLocations() {
         await loadSubLocations.call(this);
     }
+
+    removeLocation = async function (location) {
+        const response = await fetch('/api/data/location/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({location})
+        });
+           if (response.ok) {
+                alert('Локация успешно удалена');
+                this.loadSubLocations(); // Перезагрузить подлокации
+            } else {
+                alert('Ошибка при удалении локации');
+            }
+        return undefined;
+    };
     // Отображаем форму для добавления новой локации
     showAddLocationForm() {
         this.addLocationForm.style.display = 'block';

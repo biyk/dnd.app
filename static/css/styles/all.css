@@ -1,0 +1,34 @@
+body, html, #map {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
+#draw-button {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 1000;
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#reverse-button {
+  position: absolute;
+  bottom: 10px;
+  left: 123px;
+  z-index: 1000;
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#audio {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 9999999;
+}

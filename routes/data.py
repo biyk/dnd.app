@@ -110,6 +110,52 @@ def add_location():
 
     return jsonify({"message": "Локация успешно добавлена"}), 201
 
+
+@data_bp.route('/data/location/remove', methods=['POST'])
+def remove_location():
+    data = request.get_json()
+    if not data or not data.get('location'):  # Проверяем наличие данных и ключа
+        return jsonify({"error": "id локации обязательно"}), 400
+
+    location = data.get('location')  # Получаем название локации
+    if not location:
+        return jsonify({"error": "id локации обязательно"}), 400
+
+    # Находим локацию с активным статусом
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT id FROM locations 
+            WHERE id = ?
+        """, (location,))
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify({"error": "Локация не найдена"}), 404
+
+        # Удаляем локацию
+        cursor.execute("""
+            DELETE FROM locations 
+            WHERE id = ?
+        """, (location,))
+        conn.commit()
+
+        # Удаляем всех монстров
+        cursor.execute("""
+            DELETE FROM location_npc 
+            WHERE location_id = ?
+        """, (location,))
+        conn.commit()
+
+        return jsonify({"message": "Локация успешно удалена"}), 200
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 # Обработчик GET запроса для /api/data/locations/npc
 @data_bp.route('/data/locations/npc', methods=['GET'])
 def get_location_npc():
