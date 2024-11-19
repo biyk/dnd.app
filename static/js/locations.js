@@ -137,7 +137,12 @@ class LocationManager {
             if (data && Array.isArray(data)) {
                 data.forEach(npc => {
                     const listItem = document.createElement('li');
-                    listItem.textContent = npc.name;
+                    const npcName = document.createElement('span');
+                    const delNpc = document.createElement('span');
+                    npcName.textContent = npc.name;
+                    delNpc.textContent = 'X';
+                    delNpc.addEventListener('click', () => this.delNpcFromLocation(npc.id));
+                    listItem.append(npcName, delNpc)
                     this.editNpcList.appendChild(listItem);
                 });
             } else {
@@ -195,6 +200,30 @@ class LocationManager {
             }
         } catch (error) {
             console.error('Ошибка добавления персонажа:', error);
+        }
+    }
+
+    async delNpcFromLocation(monsterId) {
+        if (!this.currentEditingLocationId) return;
+        try {
+            const response = await fetch('/api/data/locations/npc', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    location_id: this.currentEditingLocationId,
+                    monster_id: monsterId
+                })
+            });
+            if (response.ok) {
+                alert('Персонаж успешно удален');
+                await this.loadNpcs(this.currentEditingLocationId); // Обновляем список персонажей
+            } else {
+                alert('Ошибка при удалении персонажа');
+            }
+        } catch (error) {
+            console.error('Ошибка удаления персонажа:', error);
         }
     }
 }
