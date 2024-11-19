@@ -1,5 +1,6 @@
 import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
 import {createNumberedIcon, getParticipantHTML, updateInfoBar} from './script/helpers.js';
+import {checkTab} from './tabs.js';
 import {
     createMainPolygon,
     createPolygons,
@@ -210,6 +211,7 @@ class MapManager {
                 this.polygonMarkers.push(marker);
             }
         });
+        this.map.whenReady(checkTab);
     }
 
     updateInfoBar(data) {

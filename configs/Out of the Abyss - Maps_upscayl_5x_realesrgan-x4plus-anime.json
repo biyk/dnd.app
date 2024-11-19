@@ -6583,11 +6583,11 @@
             ]
         ]
     },
-    "lastUpdated": 1731991685,
+    "lastUpdated": 1732009561,
     "ambience": "0fICWTcQEnk",
     "init": {
         "round": 3,
-        "try": "20",
+        "try": "8.1",
         "all": [
             {
                 "cd": "22",
@@ -6714,7 +6714,7 @@
             }
         ],
         "rating": 0,
-        "next": "8.1"
+        "next": "8"
     },
-    "timer": 1731990924
+    "timer": 1732009621
 }

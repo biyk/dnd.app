@@ -1,3 +1,5 @@
+import {exit, sleep} from './func.js'
+
 export async function init() {
     console.log("=== Начало тестирования ===");
     let sleeper = 200;
@@ -9,7 +11,7 @@ export async function init() {
         if(manager.charactersData.length){
             console.log("✓ Загрузка данных прошла успешно");
         } else {
-            console.error("✗ Ошибка при загрузке данных");
+            exit("✗ Ошибка при загрузке данных");
         }
     })();
 
@@ -27,7 +29,7 @@ export async function init() {
         if (oldData.currentCharacterIndex !== newData.currentCharacterIndex || oldData.nextCharacterIndex === newData.currentCharacterIndex) {
             console.log("✓ Кнопка Next работает");
         } else {
-            console.error("✗ Кнопка Next не работает",newData,oldData);
+            exit("✗ Кнопка Next не работает",newData,oldData);
         }
     })();
 
@@ -42,7 +44,7 @@ export async function init() {
          if (oldIndex !== newIndex) {
              console.log("✓ Кнопка Prev работает");
          } else {
-             console.error("✗ Кнопка Prev не работает");
+             exit("✗ Кнопка Prev не работает");
          }
      })();
 
@@ -69,7 +71,7 @@ export async function init() {
          if (count !== count2) {
              console.log("✓ Кнопка Добавить персонажа работает");
          } else {
-             console.error("✗ Кнопка Добавить персонажа не работает");
+             exit("✗ Кнопка Добавить персонажа не работает");
          }
 
      })();
@@ -89,7 +91,7 @@ export async function init() {
          if (manager.charactersData[0].hp_now === newName) {
              console.log("✓ Изменение данных персонажа работает");
          } else {
-             console.error("✗ Изменение данных персонажа не работает");
+             exit("✗ Изменение данных персонажа не работает");
          }
 
          window.prompt = tempPrompt; // Восстановление оригинальной функции
@@ -102,7 +104,7 @@ export async function init() {
          if (current) {
              console.log("✓ Текущий персонаж корректно определен");
          } else {
-             console.error("✗ Ошибка в определении текущего персонажа");
+             exit("✗ Ошибка в определении текущего персонажа");
          }
      })();
 
@@ -117,7 +119,7 @@ export async function init() {
          if (testCharacter.hp_now === testCharacter.hp_max) {
              console.log("✓ Восстановление здоровья работает");
          } else {
-             console.error("✗ Восстановление здоровья не работает");
+             exit("✗ Восстановление здоровья не работает");
          }
 
 
@@ -130,7 +132,7 @@ export async function init() {
          if (manager.charactersData.length === initialLength - 1) {
              console.log("✓ Удаление персонажа работает");
          } else {
-             console.error("✗ Удаление персонажа не работает");
+             exit("✗ Удаление персонажа не работает");
          }
      })();
      await sleep(sleeper);
@@ -163,13 +165,13 @@ export async function init() {
                  if (nameInput.value) {
                      console.log("✓ Данные монстра подставились в форму корректно");
                  } else {
-                     console.error("✗ Данные монстра не подставились в форму");
+                     exit("✗ Данные монстра не подставились в форму");
                  }
              } else {
-                 console.error("✗ Не удалось найти монстра в списке");
+                 exit("✗ Не удалось найти монстра в списке");
              }
          } else {
-             console.error("✗ Список монстров пустой или не обновился");
+             exit("✗ Список монстров пустой или не обновился");
          }
      })();
 
@@ -177,8 +179,5 @@ export async function init() {
      console.info("=== Тестирование завершено ===");
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 window.test = init;

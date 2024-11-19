@@ -1,7 +1,9 @@
 import {init} from "./test/init.js";
+import {empty} from "./test/empty.js";
 
 export async function test(testing = 'all') {
     if (testing === 'all') {
+        await empty();
         await init();
     } else if (typeof globalThis[testing] === 'function') {
         // Проверяем, есть ли функция с именем testing
@@ -11,3 +13,5 @@ export async function test(testing = 'all') {
         await init(); // Вызываем init, если функция отсутствует
     }
 }
+
+window.test = test;
