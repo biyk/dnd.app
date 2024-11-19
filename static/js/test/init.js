@@ -1,8 +1,8 @@
 import {exit, sleep} from './func.js'
+import {sleeper} from "../tests.js";
 
 export async function init() {
-    console.log("=== Начало тестирования ===");
-    let sleeper = 200;
+
     let manager = initiativeManager;
 
     //проверка, что данные загружаются
@@ -176,7 +176,6 @@ export async function init() {
      })();
 
      await sleep(sleeper);
-     console.info("=== Тестирование завершено ===");
 }
 
 

@@ -19,7 +19,6 @@ class LocationManager {
         this.searchNpcInput = document.getElementById('loc-npc-input');
         this.searchNpcResults = document.getElementById('npc-search-results');
         this.currentEditingLocationId = null;
-        console.log('1');
         this.init();
     }
     async init() {
