@@ -37,6 +37,6 @@ def create_app():
 # Запускаем приложение
 if __name__ == '__main__':
     app = create_app()
-    webbrowser.open("http://127.0.0.1:5000/")
+    # webbrowser.open("http://127.0.0.1:5000/")
     app.run(host='0.0.0.0', debug=True, use_reloader=True)
 

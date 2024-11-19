@@ -1,39 +1,8 @@
-import {calculateEncounterData, debounce} from './init/func.js';
+import {calculateEncounterData, debounce, createEditableSpan} from './init/func.js';
 import {displayInfoBlocks,displayCurrentAndNextTurn, fillEditForm} from './init/display.js';
 import {loadInitiativeData, sendInit} from './init/api.js';
 
 
-function createEditableSpan(content, property, index, callback, after='') {
-    // Разделяем текст на лейбл и значение
-    const [label, value] = content.split(': ');
-
-    // Создаем span для лейбла, который будет неизменным
-    const labelSpan = document.createElement('span');
-    labelSpan.textContent = `${label}: `;
-
-    // Создаем span для лейбла, который будет неизменным
-    const afterSpan = document.createElement('span');
-    afterSpan.textContent = after;
-
-    // Создаем span для значения, которое будет редактируемым
-    const valueSpan = document.createElement('span');
-    valueSpan.textContent = value;
-    valueSpan.classList.add('editable-value');
-    valueSpan.classList.add(property);
-    valueSpan.onclick = () => {
-        const newValue = window.prompt(`Введите новое значение для ${property}:`, valueSpan.textContent);
-        if (newValue !== null) {
-            valueSpan.textContent = newValue;
-            callback(index, property, newValue);
-        }
-    };
-
-    // Оборачиваем лейбл и значение в общий контейнер
-    const containerSpan = document.createElement('span');
-    containerSpan.append(labelSpan, valueSpan, afterSpan);
-
-    return containerSpan;
-}
 
 class InitiativeManager {
     constructor() {
