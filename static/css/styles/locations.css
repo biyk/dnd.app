@@ -202,4 +202,5 @@ ul#sub-locations li:hover {
 
 .location-del-npc{
     float: right;
+    cursor: pointer;
 }

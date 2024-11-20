@@ -70,7 +70,7 @@ def get_monsters_html():
                 # Открываем файл и ищем нужный блок
                 with open(html_filepath, 'r', encoding='utf-8') as html_file:
                     soup = BeautifulSoup(html_file, 'html.parser')
-                    block = soup.select_one('.card__category-bestiary')
+                    block = soup.select_one('.card__category-bestiary:not(.card__group-multiverse)')
                     if block:
                         return block.decode_contents(), 200
         except Exception as e:
