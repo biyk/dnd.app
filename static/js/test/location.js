@@ -35,7 +35,8 @@ export async function location(sleeper) {
     await sleep(sleeper);
     await (async () => {
         const initialCount = manager.subLocationList.children.length;
-        manager.showAddLocationForm();
+        manager.addLocationBtn.click();
+        await sleep(sleeper);
         manager.locationNameInput.value = "Тестовая Локация";
         manager.saveLocationBtn.click();
         await sleep(sleeper);
