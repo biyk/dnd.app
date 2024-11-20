@@ -1,11 +1,10 @@
 import {exit, sleep} from './func.js'
-import {sleeper} from "../tests.js";
 
-export async function init() {
-
+export async function init(sleeper) {
     let manager = initiativeManager;
 
     //проверка, что данные загружаются
+    console.log("=== Загрузка данных ===");
     await (async () => {
         await manager.loadInitiativeData()
         if(manager.charactersData.length){

@@ -2,7 +2,7 @@ import {debounce } from './init/func.js'
 import {} from './locations/helpers.js'
 import {loadMainLocations, loadSubLocations} from './locations/api.js'
 
-class LocationManager {
+export class LocationManager {
     constructor() {
         this.apiUrl = '/api/data/location';
         this.mainLocationSelect = document.getElementById('main-location');
@@ -70,10 +70,10 @@ class LocationManager {
             body: JSON.stringify({location})
         });
            if (response.ok) {
-                alert('Локация успешно удалена');
+                console.info('Локация успешно удалена');
                 this.loadSubLocations(); // Перезагрузить подлокации
             } else {
-                alert('Ошибка при удалении локации');
+                console.error('Ошибка при удалении локации');
             }
         return undefined;
     };
@@ -89,7 +89,7 @@ class LocationManager {
     async addNewLocation() {
         const locationName = this.locationNameInput.value.trim();
         if (!locationName) {
-            alert('Введите название локации');
+            console.error('Введите название локации');
             return;
         }
         const newLocation = {
@@ -105,16 +105,15 @@ class LocationManager {
                 body: JSON.stringify(newLocation)
             });
             if (response.ok) {
-                alert('Локация успешно добавлена');
+                console.info('Локация успешно добавлена');
                 this.hideAddLocationForm();
                 this.locationNameInput.value = ''; // Очистить поле ввода
-                this.loadSubLocations(); // Перезагрузить подлокации
+                await this.loadSubLocations(); // Перезагрузить подлокации
             } else {
-                alert('Ошибка при добавлении локации');
+                console.error('Ошибка при добавлении локации');
             }
         } catch (error) {
             console.error('Ошибка при добавлении локации:', error);
-            alert('Ошибка при добавлении локации');
         }
     }
 
@@ -141,7 +140,8 @@ class LocationManager {
                     const delNpc = document.createElement('span');
                     npcName.textContent = npc.name;
                     delNpc.textContent = 'X';
-                    delNpc.addEventListener('click', () => this.delNpcFromLocation(npc.id));
+                    delNpc.classList.add('location-del-npc')
+                    delNpc.addEventListener('click', () => this.updateNpcInLocation(npc.id, 'remove'));
                     listItem.append(npcName, delNpc)
                     this.editNpcList.appendChild(listItem);
                 });
@@ -169,7 +169,7 @@ class LocationManager {
                     const listItem = document.createElement('li');
                     listItem.textContent = npc.name;
                     listItem.dataset.monsterId = npc.id; // Сохраняем ID персонажа
-                    listItem.addEventListener('click', () => this.addNpcToLocation(npc.id));
+                    listItem.addEventListener('click', () => this.updateNpcInLocation(npc.id, 'add'));
                     this.searchNpcResults.appendChild(listItem);
                 });
             }
@@ -178,54 +178,42 @@ class LocationManager {
         }
     }
 
-    // Добавление NPC в локацию
-    async addNpcToLocation(monsterId) {
-        if (!this.currentEditingLocationId) return;
-        try {
-            const response = await fetch('/api/data/locations/npc', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    location_id: this.currentEditingLocationId,
-                    monster_id: monsterId
-                })
-            });
-            if (response.ok) {
-                alert('Персонаж успешно добавлен');
-                await this.loadNpcs(this.currentEditingLocationId); // Обновляем список персонажей
-            } else {
-                alert('Ошибка при добавлении персонажа');
-            }
-        } catch (error) {
-            console.error('Ошибка добавления персонажа:', error);
-        }
-    }
+    // Добавление/Удаление NPC в локацию
+    async updateNpcInLocation(monsterId, action) {
+    if (!this.currentEditingLocationId) return;
 
-    async delNpcFromLocation(monsterId) {
-        if (!this.currentEditingLocationId) return;
-        try {
-            const response = await fetch('/api/data/locations/npc', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    location_id: this.currentEditingLocationId,
-                    monster_id: monsterId
-                })
-            });
-            if (response.ok) {
-                alert('Персонаж успешно удален');
-                await this.loadNpcs(this.currentEditingLocationId); // Обновляем список персонажей
-            } else {
-                alert('Ошибка при удалении персонажа');
-            }
-        } catch (error) {
-            console.error('Ошибка удаления персонажа:', error);
+    const url = action === 'add'
+        ? '/api/data/locations/npc/add'
+        : '/api/data/locations/npc/remove';
+    const successMessage = action === 'add'
+        ? 'Персонаж успешно добавлен'
+        : 'Персонаж успешно удален';
+    const errorMessage = action === 'add'
+        ? 'Ошибка при добавлении персонажа'
+        : 'Ошибка при удалении персонажа';
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                location_id: this.currentEditingLocationId,
+                monster_id: monsterId
+            })
+        });
+
+        if (response.ok) {
+            console.info(successMessage);
+            await this.loadNpcs(this.currentEditingLocationId); // Обновляем список персонажей
+        } else {
+            console.error(errorMessage);
         }
+    } catch (error) {
+        console.error(`${errorMessage}:`, error);
     }
 }
+}
 
-new LocationManager();
+window.LocationManager = new LocationManager();

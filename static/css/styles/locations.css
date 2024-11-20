@@ -199,3 +199,7 @@ ul#sub-locations li:hover {
         width: 95%;
     }
 }
+
+.location-del-npc{
+    float: right;
+}

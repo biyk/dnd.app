@@ -1,7 +1,6 @@
 import {exit, sleep} from './func.js'
 
-export async function empty() {
-    let sleeper = 200;
+export async function empty(sleeper) {
 
     //Тест
     await sleep(sleeper);

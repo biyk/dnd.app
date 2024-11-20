@@ -1,6 +1,5 @@
 import {exit, sleep} from './func.js'
-import {sleeper} from "../tests.js";
-export async function tab() {
+export async function tab(sleeper) {
 
     //Тест
     await sleep(sleeper);

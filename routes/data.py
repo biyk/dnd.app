@@ -157,7 +157,7 @@ def remove_location():
 
 
 # Обработчик GET запроса для /api/data/locations/npc
-@data_bp.route('/data/locations/npc', methods=['GET'])
+@data_bp.route('/data/locations/npc/', methods=['GET'])
 def get_location_npc():
     location_id = request.args.get('location_id', type=int)  # Получаем ID локации
     if not location_id:
@@ -189,7 +189,7 @@ def get_location_npc():
 
 
 # Обработчик POST запроса для /api/data/locations/npc
-@data_bp.route('/data/locations/npc', methods=['POST'])
+@data_bp.route('/data/locations/npc/add', methods=['POST'])
 def add_location_npc():
     data = request.get_json()
     location_id = data.get('location_id')  # ID локации
@@ -219,3 +219,35 @@ def add_location_npc():
     conn.close()
 
     return jsonify({"message": "Связь успешно добавлена"}), 201
+
+
+@data_bp.route('/data/locations/npc/remove', methods=['POST'])
+def remove_location_npc():
+    data = request.get_json()
+    location_id = data.get('location_id')  # ID локации
+    npc_id = data.get('monster_id')  # ID NPC
+
+    print(location_id, npc_id)
+    if not location_id or not npc_id:
+        return jsonify({"error": "location_id и npc_id обязательны"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Проверяем, существует ли такая запись
+    cursor.execute("""
+        SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
+    """, (location_id, npc_id))
+    if cursor.fetchone():
+
+
+        # Удаляем персонажа
+        cursor.execute("""
+             DELETE FROM location_npc 
+             WHERE npc_id = ?
+         """, (npc_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Связь успешно добавлена"}), 201
+    return jsonify({"error": "Данного монстра в этой локаци нет"}), 200
