@@ -1,8 +1,11 @@
 import { exit, sleep } from './func.js';
+import {showTab} from '../tabs.js'
 
 export async function location(sleeper) {
     const manager = window.LocationManager;
 
+    showTab('monster-tab')
+    await sleep(sleeper);
     // Проверка загрузки основных локаций
     console.log("=== Загрузка основных локаций ===");
     await (async () => {

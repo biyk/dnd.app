@@ -1,4 +1,5 @@
 import {exit, sleep} from './func.js'
+import {showTab} from '../tabs.js'
 
 export async function empty(sleeper) {
 

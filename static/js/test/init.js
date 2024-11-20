@@ -1,8 +1,12 @@
 import {exit, sleep} from './func.js'
+import {showTab} from '../tabs.js'
 
 export async function init(sleeper) {
     let manager = initiativeManager;
 
+
+    showTab('initiative-tab')
+    await sleep(sleeper);
     //проверка, что данные загружаются
     console.log("=== Загрузка данных ===");
     await (async () => {

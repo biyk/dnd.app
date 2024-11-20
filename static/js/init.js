@@ -1,6 +1,6 @@
 import {calculateEncounterData, debounce, createEditableSpan} from './init/func.js';
 import {displayInfoBlocks,displayCurrentAndNextTurn, fillEditForm} from './init/display.js';
-import {loadInitiativeData, sendInit} from './init/api.js';
+import {loadInitiativeData, sendInit, infoCharacter} from './init/api.js';
 
 
 
@@ -122,6 +122,10 @@ class InitiativeManager {
             const healButton = document.createElement('button');
             healButton.textContent = '+';
             healButton.onclick = () => this.healCharacter(index);
+
+            const infoButton = document.createElement('button');
+            healButton.textContent = 'i';
+            healButton.onclick = () => this.infoCharacter(character.name);
 
             row.append(nameSpan, initSpan, cdSpan, hpSpan, surpriseLabel, npcLabel, expSpan, deleteButton, healButton);
             container.appendChild(row);
@@ -249,6 +253,10 @@ class InitiativeManager {
             );
 
         }
+    }
+
+    infoCharacter(name) {
+        infoCharacter(name);
     }
 }
 
