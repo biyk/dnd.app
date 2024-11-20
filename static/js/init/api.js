@@ -30,7 +30,26 @@ export  function  sendInit() {
     }).catch(error => console.error("Ошибка при отправке данных:", error));
 }
 export async function infoCharacter(name) {
-    //поиск персонажа
-    const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}&type=html`);
+    // Поиск персонажа
+    const response = await fetch(`/api/data/monsters/html?name=${encodeURIComponent(name)}`);
+    const text = await response.text();
 
+    // Создание попапа
+    const popup = document.createElement('div');
+    popup.className = 'popup-overlay';
+
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="popup-text">${text}</div>
+            <button class="popup-close-btn">OK</button>
+        </div>
+    `;
+
+    // Добавляем попап на страницу
+    document.body.appendChild(popup);
+
+    // Закрытие попапа при клике на кнопку
+    popup.querySelector('.popup-close-btn').addEventListener('click', () => {
+        document.body.removeChild(popup);
+    });
 }

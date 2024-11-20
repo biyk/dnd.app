@@ -124,10 +124,10 @@ class InitiativeManager {
             healButton.onclick = () => this.healCharacter(index);
 
             const infoButton = document.createElement('button');
-            healButton.textContent = 'i';
-            healButton.onclick = () => this.infoCharacter(character.name);
+            infoButton.textContent = 'i';
+            infoButton.onclick = () => this.infoCharacter(character.name);
 
-            row.append(nameSpan, initSpan, cdSpan, hpSpan, surpriseLabel, npcLabel, expSpan, deleteButton, healButton);
+            row.append(nameSpan, initSpan, cdSpan, hpSpan, surpriseLabel, npcLabel, expSpan, deleteButton, healButton, infoButton);
             container.appendChild(row);
         });
 
@@ -233,7 +233,7 @@ class InitiativeManager {
                         return;
                     }
                     try {
-                        const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}`);
+                        const response = await fetch(`/api/data/monsters/json?name=${encodeURIComponent(query)}`);
                         if (!response.ok) throw new Error('Error fetching data');
                         const data = await response.json();
                         npcList.innerHTML = data.map((npc, index) => `<li data-index="${index}" data-json='${JSON.stringify(npc)}'>${npc.name}</li>`).join('');

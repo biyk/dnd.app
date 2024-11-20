@@ -161,7 +161,7 @@ export class LocationManager {
             return;
 }
         try {
-            const response = await fetch(`/api/data/monsters?name=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/data/monsters/json?name=${encodeURIComponent(query)}`);
             const data = await response.json();
             this.searchNpcResults.innerHTML = '';
             if (data && Array.isArray(data)) {

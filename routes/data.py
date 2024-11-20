@@ -1,5 +1,7 @@
-from flask import Blueprint, render_template
-from flask import Flask, request, jsonify
+from flask import Blueprint, render_template, Flask, request, jsonify
+import os
+from flask import request, render_template, send_file
+from bs4 import BeautifulSoup  # Убедитесь, что библиотека установлена
 import sqlite3
 
 app = Flask(__name__)
@@ -11,48 +13,80 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Создаем Blueprint для главной страницы
 data_bp = Blueprint('data', __name__)
 
-@data_bp.route('/data/monsters', methods=['GET'])
+@data_bp.route('/data/monsters/json', methods=['GET'])
 def get_monsters():
-    name_query = request.args.get('name', '').strip()  # Получаем запрос пользователя
+    name_query = request.args.get('name', '').strip()
     if not name_query:
         return jsonify([])
 
-    # Генерируем возможные варианты регистра
     variants = [name_query.lower(), name_query.capitalize(), name_query.upper()]
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Создаём SQL-запрос с несколькими LIKE
-    conditions = " OR ".join(["name LIKE ?"] * len(variants))
     query = f"""
         SELECT * FROM monsters
-        WHERE {conditions} LIMIT 10
+        WHERE {" OR ".join(["name LIKE ?"] * len(variants))} LIMIT 10
     """
-    cursor.execute(query, tuple(f"%{v}%" for v in variants))
-    results = cursor.fetchall()
-    conn.close()
+    with get_db_connection() as conn:
+        results = conn.execute(query, tuple(f"%{v}%" for v in variants)).fetchall()
 
-    # Формируем JSON со всеми полями
     return jsonify([dict(row) for row in results])
 
 
-# Обработчик GET запроса для /api/data/location
+
+@data_bp.route('/data/monsters/html', methods=['GET'])
+def get_monsters_html():
+    html_dir = './utils/dndsu'
+    name_query = request.args.get('name', '').strip()
+    if not name_query:
+        return "Имя монстра не указано", 400  # Возвращаем ошибку если имя не задано
+
+    query = """
+        SELECT * FROM monsters
+        WHERE name LIKE ? LIMIT 10
+    """
+    with get_db_connection() as conn:
+        results = conn.execute(query, (f"%{name_query}%",)).fetchall()
+
+    if not results:
+        return "Монстры не найдены", 404
+
+    monsters = [dict(row) for row in results]
+
+    # Работаем с первым результатом (или можно сделать цикл для всех)
+    for monster in monsters:
+        url = monster.get('url')
+        if not url or monster.get('name')!=name_query:
+            continue  # Пропускаем, если URL отсутствует
+
+        # Преобразуем URL в имя файла
+        try:
+            filename = url.split('/')[-2]  # Извлекаем последнюю часть URL
+            html_filename = f"bestiary_{filename}.html"
+            html_filepath = os.path.join(html_dir, html_filename)
+
+            # Проверяем, существует ли файл
+            if os.path.exists(html_filepath):
+                # Открываем файл и ищем нужный блок
+                with open(html_filepath, 'r', encoding='utf-8') as html_file:
+                    soup = BeautifulSoup(html_file, 'html.parser')
+                    block = soup.select_one('.card__category-bestiary')
+                    if block:
+                        return block.decode_contents(), 200
+        except Exception as e:
+            return f"Ошибка обработки файла: {e}", 500
+
+    return "HTML-файл не найден или блок отсутствует " + html_filepath, 404
+
+
+
 @data_bp.route('/data/location', methods=['GET'])
 def get_locations():
-    parent_id = request.args.get('parent_id', type=int)  # Получаем родительский ID
-    type_filter = request.args.get('type', '')  # Получаем тип локации (main или second)
-    active = request.args.get('active', type=bool, default=True)  # Фильтр по активности, по умолчанию True
+    parent_id = request.args.get('parent_id', type=int)
+    type_filter = request.args.get('type', '')
+    active = request.args.get('active', type=bool, default=True)
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Строим базовый запрос
     query = "SELECT * FROM locations WHERE 1=1"
-
     params = []
 
     if type_filter:
@@ -67,187 +101,115 @@ def get_locations():
         query += " AND active = ?"
         params.append(active)
 
-    # Выполняем запрос
-    cursor.execute(query, tuple(params))
-    results = cursor.fetchall()
-    conn.close()
+    with get_db_connection() as conn:
+        results = conn.execute(query, tuple(params)).fetchall()
 
-    # Формируем и возвращаем результат
     return jsonify([dict(row) for row in results])
 
-
-# Обработчик POST запроса для /api/data/location
 @data_bp.route('/data/location', methods=['POST'])
 def add_location():
     data = request.get_json()
-    name = data.get('name').strip()  # Получаем название локации
+    name = data.get('name', '').strip()
     if not name:
         return jsonify({"error": "Название локации обязательно"}), 400
 
-    # Находим основную локацию с активным статусом
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        main_location = conn.execute("""
+            SELECT id FROM locations 
+            WHERE type = 'main' AND active = 1
+        """).fetchone()
 
-    cursor.execute("""
-        SELECT id FROM locations 
-        WHERE type = 'main' AND active = 1
-    """)
-    main_location = cursor.fetchone()
+        if not main_location:
+            return jsonify({"error": "Нет активной основной локации"}), 400
 
-    if not main_location:
-        conn.close()
-        return jsonify({"error": "Нет активной основной локации"}), 400
-
-    parent_id = main_location['id']
-
-    # Вставляем новую запись с типом 'second'
-    cursor.execute("""
-        INSERT INTO locations (name, type, parent_id, active)
-        VALUES (?, 'second', ?, 1)
-    """, (name, parent_id))
-    conn.commit()
-    conn.close()
+        parent_id = main_location['id']
+        conn.execute("""
+            INSERT INTO locations (name, type, parent_id, active)
+            VALUES (?, 'second', ?, 1)
+        """, (name, parent_id))
+        conn.commit()
 
     return jsonify({"message": "Локация успешно добавлена"}), 201
-
 
 @data_bp.route('/data/location/remove', methods=['POST'])
 def remove_location():
     data = request.get_json()
-    if not data or not data.get('location'):  # Проверяем наличие данных и ключа
-        return jsonify({"error": "id локации обязательно"}), 400
-
-    location = data.get('location')  # Получаем название локации
+    location = data.get('location')
     if not location:
         return jsonify({"error": "id локации обязательно"}), 400
 
-    # Находим локацию с активным статусом
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-            SELECT id FROM locations 
-            WHERE id = ?
-        """, (location,))
-        result = cursor.fetchone()
+    with get_db_connection() as conn:
+        result = conn.execute("""
+            SELECT id FROM locations WHERE id = ?
+        """, (location,)).fetchone()
 
         if not result:
             return jsonify({"error": "Локация не найдена"}), 404
 
-        # Удаляем локацию
-        cursor.execute("""
-            DELETE FROM locations 
-            WHERE id = ?
-        """, (location,))
+        conn.execute("DELETE FROM locations WHERE id = ?", (location,))
+        conn.execute("DELETE FROM location_npc WHERE location_id = ?", (location,))
         conn.commit()
 
-        # Удаляем всех монстров
-        cursor.execute("""
-            DELETE FROM location_npc 
-            WHERE location_id = ?
-        """, (location,))
-        conn.commit()
+    return jsonify({"message": "Локация успешно удалена"}), 200
 
-        return jsonify({"message": "Локация успешно удалена"}), 200
-
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# Обработчик GET запроса для /api/data/locations/npc
 @data_bp.route('/data/locations/npc/', methods=['GET'])
 def get_location_npc():
-    location_id = request.args.get('location_id', type=int)  # Получаем ID локации
+    location_id = request.args.get('location_id', type=int)
     if not location_id:
         return jsonify({"error": "location_id обязателен"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        npc_ids = [row['npc_id'] for row in conn.execute("""
+            SELECT npc_id FROM location_npc WHERE location_id = ?
+        """, (location_id,))]
 
-    # Получаем NPC IDs, связанные с данной локацией
-    cursor.execute("""
-        SELECT npc_id FROM location_npc WHERE location_id = ?
-    """, (location_id,))
-    npc_ids = [row['npc_id'] for row in cursor.fetchall()]
+        if not npc_ids:
+            return jsonify([])
 
-    if not npc_ids:
-        conn.close()
-        return jsonify([])  # Возвращаем пустой список, если NPC не связаны
+        query = f"SELECT * FROM monsters WHERE id IN ({','.join(['?'] * len(npc_ids))})"
+        monsters = conn.execute(query, tuple(npc_ids)).fetchall()
 
-    # Получаем информацию о NPC из таблицы monsters
-    query = f"""
-        SELECT * FROM monsters WHERE id IN ({','.join(['?'] * len(npc_ids))})
-    """
-    cursor.execute(query, tuple(npc_ids))
-    monsters = cursor.fetchall()
-    conn.close()
-
-    # Формируем и возвращаем результат
     return jsonify([dict(row) for row in monsters])
 
-
-# Обработчик POST запроса для /api/data/locations/npc
 @data_bp.route('/data/locations/npc/add', methods=['POST'])
 def add_location_npc():
     data = request.get_json()
-    location_id = data.get('location_id')  # ID локации
-    npc_id = data.get('monster_id')  # ID NPC
+    location_id = data.get('location_id')
+    npc_id = data.get('monster_id')
 
-    print(location_id, npc_id)
     if not location_id or not npc_id:
         return jsonify({"error": "location_id и npc_id обязательны"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        if conn.execute("""
+            SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
+        """, (location_id, npc_id)).fetchone():
+            return jsonify({"message": "Такая связь уже существует"}), 200
 
-    # Проверяем, существует ли такая запись
-    cursor.execute("""
-        SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
-    """, (location_id, npc_id))
-    if cursor.fetchone():
-        conn.close()
-        return jsonify({"message": "Такая связь уже существует"}), 200
-
-    # Добавляем новую связь
-    cursor.execute("""
-        INSERT INTO location_npc (location_id, npc_id)
-        VALUES (?, ?)
-    """, (location_id, npc_id))
-    conn.commit()
-    conn.close()
+        conn.execute("""
+            INSERT INTO location_npc (location_id, npc_id)
+            VALUES (?, ?)
+        """, (location_id, npc_id))
+        conn.commit()
 
     return jsonify({"message": "Связь успешно добавлена"}), 201
-
 
 @data_bp.route('/data/locations/npc/remove', methods=['POST'])
 def remove_location_npc():
     data = request.get_json()
-    location_id = data.get('location_id')  # ID локации
-    npc_id = data.get('monster_id')  # ID NPC
+    location_id = data.get('location_id')
+    npc_id = data.get('monster_id')
 
-    print(location_id, npc_id)
     if not location_id or not npc_id:
         return jsonify({"error": "location_id и npc_id обязательны"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        if not conn.execute("""
+            SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
+        """, (location_id, npc_id)).fetchone():
+            return jsonify({"error": "Данного монстра в этой локации нет"}), 200
 
-    # Проверяем, существует ли такая запись
-    cursor.execute("""
-        SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
-    """, (location_id, npc_id))
-    if cursor.fetchone():
-
-
-        # Удаляем персонажа
-        cursor.execute("""
-             DELETE FROM location_npc 
-             WHERE npc_id = ?
-         """, (npc_id,))
+        conn.execute("DELETE FROM location_npc WHERE npc_id = ?", (npc_id,))
         conn.commit()
-        conn.close()
 
-        return jsonify({"message": "Связь успешно добавлена"}), 201
-    return jsonify({"error": "Данного монстра в этой локаци нет"}), 200
+    return jsonify({"message": "Связь успешно удалена"}), 200
