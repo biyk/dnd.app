@@ -104,6 +104,7 @@
         </div>
         <div id="npc-tab" class="tab-content">
             <h2>НПС</h2>
+            <div id="npc-list-content"></div>
             <form id="npc-form" class="npc-form" action="/api/data/npc/add" method="POST">
                 <div class="npc-form__group">
                     <label for="npc-kd" class="npc-form__label">КД:</label>
@@ -129,7 +130,9 @@
                      <textarea id="npc-custom-text" name="text"></textarea>
                 </div>
                 <input type="hidden" name="template" id="npc-template">
-                <button type="submit" class="npc-form__button">Добавить</button>
+                <input type="hidden" name="id" id="npc-id">
+                <button type="button" class="npc-form__button" id="add-npc-button">Добавить</button>
+                <button type="button" class="npc-form__button hidden" id="update-npc-button">Обновить</button>
             </form>
 
         </div>

@@ -22,7 +22,6 @@ def get_monsters():
         return jsonify([])
 
     variants = [name_query.lower(), name_query.capitalize(), name_query.upper()]
-
     query = f"""
         SELECT * FROM monsters
         WHERE {" OR ".join(["name LIKE ?"] * len(variants))} LIMIT 10
@@ -31,8 +30,6 @@ def get_monsters():
         results = conn.execute(query, tuple(f"%{v}%" for v in variants)).fetchall()
 
     return jsonify([dict(row) for row in results])
-
-
 
 @data_bp.route('/data/monsters/html', methods=['GET'])
 def get_monsters_html():
@@ -258,3 +255,56 @@ def add_custom_npc():
         conn.commit()
 
     return jsonify({"message": "Персонаж успешно добавлен"}), 200
+
+
+@data_bp.route('/data/npc', methods=['GET'])
+def get_custom_npc():
+    name = request.args.get('name', type=str)  # Если это строка, используем type=str
+
+    with get_db_connection() as conn:
+        if name:
+            # Используем параметризованный запрос для защиты от SQL-инъекций
+            query = "SELECT * FROM npc WHERE name = ?"
+            results = conn.execute(query, (name,)).fetchall()
+        else:
+            query = "SELECT * FROM npc"
+            results = conn.execute(query).fetchall()
+
+    return jsonify([dict(row) for row in results])
+
+@data_bp.route('/data/npc/delete/<int:id>', methods=['DELETE'])
+def delete_custom_npc(id):
+    with get_db_connection() as conn:
+        # Проверяем, существует ли персонаж с таким ID
+        npc = conn.execute("SELECT * FROM npc WHERE id = ?", (id,)).fetchone()
+        if not npc:
+            return jsonify({"error": "Персонаж не найден"}), 404
+
+        # Удаляем персонажа
+        conn.execute("DELETE FROM npc WHERE id = ?", (id,))
+        conn.commit()
+
+    return jsonify({"message": f"Персонаж с ID {id} успешно удалён"}), 200
+
+@data_bp.route('/data/npc/update/', methods=['POST'])
+def update_custom_npc():
+    data = request.form
+    cd = data.get('cd')
+    id = data.get('id')
+    name = data.get('name')
+    health = data.get('health')
+    text = data.get('text')
+
+    with get_db_connection() as conn:
+        # Проверяем, существует ли запись с данным ID
+        cursor = conn.execute("SELECT id FROM npc WHERE id = ?", (id,))
+        if cursor.fetchone() is None:
+            return jsonify({"error": f"Персонаж с ID {id} не найден"}), 404
+
+        # Обновляем запись
+        conn.execute("""
+            UPDATE npc SET name = ?, cd = ?, hp = ?, text = ? WHERE id = ?
+        """, (name, cd, health, text, id))
+        conn.commit()
+
+    return jsonify({"message": f"Персонаж с ID {id} успешно изменен"}), 200
