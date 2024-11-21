@@ -104,7 +104,34 @@
         </div>
         <div id="npc-tab" class="tab-content">
             <h2>НПС</h2>
-            <p>Тут нпс</p>
+            <form id="npc-form" class="npc-form" action="/api/data/npc/add" method="POST">
+                <div class="npc-form__group">
+                    <label for="npc-kd" class="npc-form__label">КД:</label>
+                    <input type="text" id="npc-kd" name="cd" class="npc-form__input" required>
+                </div>
+                <div class="npc-form__group">
+                    <label for="npc-name" class="npc-form__label">Имя:</label>
+                    <input type="text" id="npc-name" name="name" class="npc-form__input" required>
+                </div>
+                <div class="npc-form__group">
+                    <label for="npc-health" class="npc-form__label">Здоровье:</label>
+                    <input type="number" id="npc-health" name="health" class="npc-form__input" min="0" required>
+                </div>
+                <div class="npc-form__group">
+                    <label for="npc-template-search" class="npc-form__label">Шаблон:</label>
+                    <input id="npc-template-search" name="template-search" class="npc-form__input" min="0" required>
+                    <ul id="template-npc-search-results">
+                        <!-- Результаты поиска персонажей -->
+                    </ul>
+                </div>
+                 <div class="npc-form__group">
+                    <label for="npc-custom-text" class="npc-form__label">Заметки:</label>
+                     <textarea id="npc-custom-text" name="text"></textarea>
+                </div>
+                <input type="hidden" name="template" id="npc-template">
+                <button type="submit" class="npc-form__button">Добавить</button>
+            </form>
+
         </div>
         <script src="{{ url_for('static', filename='js/external/turf.js') }}" async defer></script>
         <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -115,6 +142,7 @@
         <script src="{{ url_for('static', filename='js/textarea.js') }}" async defer></script>
         <script src="{{ url_for('static', filename='js/ambience.js') }}" async defer></script>
         <script type="module" src="{{ url_for('static', filename='js/locations.js') }}" async defer></script>
+        <script type="module" src="{{ url_for('static', filename='js/npc.js') }}" async defer></script>
         <script type="module" src="{{ url_for('static', filename='js/tests.js') }}" async defer></script>
     </body>
 </html>

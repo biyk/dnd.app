@@ -151,6 +151,29 @@ def remove_location():
         conn.commit()
 
     return jsonify({"message": "Локация успешно удалена"}), 200
+@data_bp.route('/data/location/update', methods=['POST'])
+def update_location():
+    data = request.get_json()
+    location = data.get('location')
+    name = data.get('name')
+
+    if not location:
+        return jsonify({"error": "id локации обязательно"}), 400
+    if not name:
+        return jsonify({"error": "Имя локации обязательно"}), 400
+
+    with get_db_connection() as conn:
+        result = conn.execute("""
+            SELECT id FROM locations WHERE id = ?
+        """, (location,)).fetchone()
+
+        if not result:
+            return jsonify({"error": "Локация не найдена"}), 404
+
+        conn.execute("UPDATE locations SET name = ? WHERE id = ?", (name, location,))
+        conn.commit()
+
+    return jsonify({"message": "Локация успешно обновлена"}), 200
 
 @data_bp.route('/data/locations/npc/', methods=['GET'])
 def get_location_npc():
@@ -213,3 +236,25 @@ def remove_location_npc():
         conn.commit()
 
     return jsonify({"message": "Связь успешно удалена"}), 200
+
+
+@data_bp.route('/data/npc/add', methods=['POST'])
+def add_custom_npc():
+    data = request.form
+    cd = data.get('cd')
+    name = data.get('name')
+    health = data.get('health')
+    template = data.get('template')
+    text = data.get('text')
+
+    if not template:
+        return jsonify({"error": "template обязательны"}), 400
+
+    with get_db_connection() as conn:
+        conn.execute("""
+            INSERT INTO npc (name, cd, hp, text, template)
+            VALUES (?, ?, ?, ?, ?)
+        """, (name, cd, health, text, template, ))
+        conn.commit()
+
+    return jsonify({"message": "Персонаж успешно добавлен"}), 200

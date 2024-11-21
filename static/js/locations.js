@@ -29,6 +29,7 @@ export class LocationManager {
         this.saveLocationBtn.addEventListener('click', () => this.addNewLocation());
         this.cancelLocationBtn.addEventListener('click', () => this.toggleForm(false));
         this.searchNpcInput.addEventListener('input', debounce(() => this.searchNpc(), 300));
+        this.editNameInput.addEventListener('keyup', debounce(() => this.editLocationName(), 300));//
         this.closePopup.addEventListener('click', () => this.hideEditPopup());
         this.mainLocationSelect.dispatchEvent(new Event('change'));
     }
@@ -88,6 +89,7 @@ export class LocationManager {
         this.currentEditingLocationId = location.ID;
         this.editPopup.style.display = 'block';
         this.editNameInput.value = location.name;
+        this.editNameInput.dataset.id = location.ID;
         await this.loadNpcs(location.ID);
     }
 
@@ -100,8 +102,14 @@ export class LocationManager {
                     <li>
                         <span>${npc.name}</span>
                         <span class="location-del-npc" onclick="window.LocationManager.updateNpcInLocation(${npc.id}, 'remove')">X</span>
+                        <span class="move-npc-btn" onclick="window.LocationManager.showLocationSelect(${npc.id})">➡</span>
+                        <select class="npc-location-select hidden" data-npc-id="${npc.id}" onchange="window.LocationManager.moveNpcToNewLocation(${npc.id}, this.value)">
+                            <option>Выберите локацию</option>
+                            ${Array.from(this.subLocationList.children).map(loc => `<option value="${loc.dataset.locationId}">${loc.querySelector('.location-span').innerText}</option>`).join('')}
+                        </select>
                     </li>`).join('')
                 : '';
+            console.log(this.subLocationList.children);
         } catch (error) {
             console.error('Ошибка загрузки персонажей:', error);
         }
@@ -138,6 +146,49 @@ export class LocationManager {
             }
         } catch (error) {
             console.error(`Ошибка при ${action === 'add' ? 'добавлении' : 'удалении'} персонажа:`, error);
+        }
+    }
+
+    showLocationSelect(npcId) {
+        const select = document.querySelector(`.npc-location-select[data-npc-id="${npcId}"]`);
+        select.classList.toggle('hidden');
+    }
+
+    async moveNpcToNewLocation(npcId, newLocationId) {
+        try {
+            // Удаление из текущей локации
+            await fetch('/api/data/locations/npc/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location_id: this.currentEditingLocationId, monster_id: npcId })
+            });
+
+            // Добавление в новую локацию
+            await fetch('/api/data/locations/npc/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location_id: newLocationId, monster_id: npcId })
+            });
+
+            await this.loadNpcs(this.currentEditingLocationId);
+            console.info('Персонаж успешно перемещен');
+        } catch (error) {
+            console.error('Ошибка перемещения персонажа:', error);
+        }
+    }
+
+    async editLocationName() {
+        const name = this.editNameInput.value.trim();
+        const location = this.editNameInput.dataset.id;
+        try {
+            const response = await fetch('/api/data/location/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name , location})
+            });
+            response.ok ? await this.loadSubLocations() : console.error('Ошибка при удалении локации');
+        } catch (error) {
+            console.error('Ошибка при удалении локации:', error);
         }
     }
 }

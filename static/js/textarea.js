@@ -1,4 +1,3 @@
-document.addEventListener("DOMContentLoaded", () => {
     const textarea = document.getElementById('dynamic-text');
 
     // Функция debounce, которая задерживает выполнение функции
@@ -50,4 +49,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Загружаем данные при загрузке страницы
     loadData();
-});

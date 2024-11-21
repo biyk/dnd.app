@@ -1,0 +1,44 @@
+.npc-form {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+}
+
+.npc-form__group {
+  margin-bottom: 15px;
+}
+
+.npc-form__label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.npc-form__input,
+.npc-form__select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.npc-form__button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.npc-form__button:hover {
+  background-color: #0056b3;
+}
