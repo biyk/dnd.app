@@ -7,9 +7,6 @@ export class SlideMenu {
     constructor(mapManager) {
         this.mapManager = mapManager;
         this.markers = [];
-        document.getElementById('marker-button').addEventListener('click', (e) => {
-            this.toggle();
-        })
     }
     toggle() {
         const sidebar = document.createElement('div');

@@ -237,15 +237,22 @@ class MapManager {
                 // Сбрасываем выбранную иконку
                 this.selectedIcon = null;
                 document.querySelector('.marker-menu').style.display = 'block'; // Показываем сайдбар
+                console.log(
+                    Array.from(this.points)
+                )
             }
         });
 
         this.map.whenReady(this.whenReady);
 
-        document.getElementById('marker-button').addEventListener('click', (e) => {
-            const sidebar = document.querySelector('.marker-menu');
-            sidebar.style.right = sidebar.style.right === '0px' ? '-33%' : '0px';
-        })
+        let markerButton = document.getElementById('marker-button');
+        if (markerButton) {
+            markerButton.addEventListener('click', (e) => {
+                const sidebar = document.querySelector('.marker-menu');
+                sidebar.style.right = sidebar.style.right === '0px' ? '-33%' : '0px';
+            })
+        }
+
     }
 
     whenReady(){
@@ -301,7 +308,6 @@ class MapManager {
             const button = document.createElement('button');
             button.textContent = `${icon.emoji} ${icon.name}`;
             button.addEventListener('click', () => {
-                console.log(icon,this)
                 this.selectedIcon = icon; // Запоминаем выбранную иконку
                 sidebar.style.display = 'none'; // Скрываем сайдбар
             });
