@@ -18,6 +18,10 @@
   font-weight: bold;
 }
 
+#npc-custom-text{
+    width: 784px; height: 178px;
+}
+
 .npc-form__input,
 .npc-form__select {
   width: 100%;

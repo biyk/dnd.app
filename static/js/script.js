@@ -8,6 +8,7 @@ import {
     toggleMainPolygonVisibility,
     updateMainPolygon
 } from './script/poligons.js'
+import {SlideMenu} from './script/makrer.js'
 
 class MapManager {
     constructor() {
@@ -21,6 +22,7 @@ class MapManager {
         this.drawingMode = false; // Режим рисования
         this.lastUpdated = 0; // Последняя временная метка
         this.admin_mode = window.admin_mode || false; // Админ-режим
+        this.config = {};
     }
 
     async initMap() {
@@ -30,9 +32,10 @@ class MapManager {
         this.mapName = init.map;
         const config = await getConfig(this.mapName);
         if (!config) return;
-
+        this.config = config;
         this.lastUpdated = config.lastUpdated;
         this.initializeMap(config);
+        this.menu = new SlideMenu(this);
         this.createPolygons(config);
         this.setDrawButtonHandler();
         this.setReverseButtonHandler(config);
@@ -242,4 +245,5 @@ class MapManager {
 }
 
 const mapManager = new MapManager();
+window.mapManager = mapManager;
 mapManager.initMap();
