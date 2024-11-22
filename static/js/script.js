@@ -23,6 +23,9 @@ class MapManager {
         this.lastUpdated = 0; // Последняя временная метка
         this.admin_mode = window.admin_mode || false; // Админ-режим
         this.config = {};
+        this.SlideMenu =  {};
+        this.selectedIcon = null;
+        this.points = new Map();
     }
 
     async initMap() {
@@ -35,11 +38,11 @@ class MapManager {
         this.config = config;
         this.lastUpdated = config.lastUpdated;
         this.initializeMap(config);
-        this.menu = new SlideMenu(this);
         this.createPolygons(config);
         this.setDrawButtonHandler();
         this.setReverseButtonHandler(config);
         this.setMapEventHandlers();
+        this.initializeMarkerMenu();
         updateInfoBar(config);
         if (!this.admin_mode) setInterval(() => this.checkForConfigUpdates(), 1000);
     }
@@ -214,7 +217,49 @@ class MapManager {
                 this.polygonMarkers.push(marker);
             }
         });
-        this.map.whenReady(checkTab);
+
+        this.map.on('click', (e) => {
+            if (this.selectedIcon) {
+                // Размещаем маркер с выбранной иконкой
+                let id = new Date().getTime();
+                const marker = L.marker(e.latlng, {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div data-id>${this.selectedIcon.emoji}</div>`,
+                    }),
+                    draggable: true
+                }).addTo(this.map);
+                marker.bindPopup(`
+                   <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
+                 `);
+
+                this.points.set(id, marker);
+                // Сбрасываем выбранную иконку
+                this.selectedIcon = null;
+                document.querySelector('.marker-menu').style.display = 'block'; // Показываем сайдбар
+            }
+        });
+
+        this.map.whenReady(this.whenReady);
+
+        document.getElementById('marker-button').addEventListener('click', (e) => {
+            const sidebar = document.querySelector('.marker-menu');
+            sidebar.style.right = sidebar.style.right === '0px' ? '-33%' : '0px';
+        })
+    }
+
+    whenReady(){
+        checkTab();
+        this.SlideMenu =  new SlideMenu();
+        this.SlideMenu.initializeMapMarkers(this.map);
+    }
+
+    removeMarker(index) {
+        const marker = this.points.get(index);
+        if (marker) {
+            window.mapManager.map.removeLayer(marker);
+            this.points.delete(index);
+        }
     }
 
     updateInfoBar(data) {
@@ -242,6 +287,30 @@ class MapManager {
       Следующий: ${next ? getParticipantHTML(next) : '---'}
     `;
     }
+
+    initializeMarkerMenu() {
+        const sidebar = document.createElement('div');
+        sidebar.classList.add('marker-menu');
+        this.menu = sidebar;
+        const icons = [{ name: "Человечек", emoji: "👤" },
+            { name: "Дерево", emoji: "🌳" },
+            { name: "Черепушка", emoji: "💀" },];
+        const list = document.createElement('ul');
+        // Создаем кнопки для каждой иконки
+        icons.forEach(icon => {
+            const button = document.createElement('button');
+            button.textContent = `${icon.emoji} ${icon.name}`;
+            button.addEventListener('click', () => {
+                console.log(icon,this)
+                this.selectedIcon = icon; // Запоминаем выбранную иконку
+                sidebar.style.display = 'none'; // Скрываем сайдбар
+            });
+            list.appendChild(button);
+        });
+        sidebar.appendChild(list);
+        document.body.appendChild(sidebar);
+    }
+
 }
 
 const mapManager = new MapManager();
