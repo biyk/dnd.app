@@ -7,7 +7,7 @@ import {loadInitiativeData, sendInit, infoCharacter} from './init/api.js';
 class InitiativeManager {
     constructor() {
         this.currentCharacterIndex = 0;
-        this.currentRound = 0;
+        this.currentRound = 1;
         this.charactersData = [];
         this.rating = 0;
         this.nextCharacterIndex = 0;
@@ -145,8 +145,8 @@ class InitiativeManager {
 
     // Функция сброса инициативы
     resetInitiative() {
-        this.charactersData.forEach((character) => (character.init = ''));
-        this.currentRound = 0;
+        this.charactersData.forEach((character) => (character.init = '0'));
+        this.currentRound = 1;
 
         this.displayCharactersAndSendInit();
     }

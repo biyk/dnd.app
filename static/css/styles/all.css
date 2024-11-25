@@ -43,3 +43,6 @@ body, html, #map {
     z-index: 9999999;
 }
 
+#map {
+    transition: opacity 500ms cubic-bezier(0.065, 0.880, 0.215, 0.975);
+}

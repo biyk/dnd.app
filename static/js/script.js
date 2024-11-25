@@ -204,8 +204,13 @@ class MapManager {
             this.sendPolygonsData();
         });
 
+        this.map.on('movestart', ()=>{
+            document.getElementById('map').style.opacity = '0';
+        });
         this.map.on('moveend', ()=>{
-            this.sendPolygonsData()
+            this.sendPolygonsData();
+            document.getElementById('map').style.opacity = '1';
+
         });
 
         this.map.on('click', (e) => {

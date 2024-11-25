@@ -7,10 +7,12 @@ from flask import Blueprint, request, jsonify
 # Создаем Blueprint для работы с конфигурациями
 config_bp = Blueprint('config', __name__)
 
+
 # Получаем путь к конфигурациям
 def get_config_path():
     from app import app_path  # импортируем app_path локально, чтобы избежать циклического импорта
     return os.path.join(app_path, 'configs')
+
 
 # Вспомогательная функция для загрузки JSON файла конфигурации
 def load_config(file_name):
@@ -20,6 +22,7 @@ def load_config(file_name):
             return json.load(f)
     except FileNotFoundError:
         return None
+
 
 # Вспомогательная функция для сохранения JSON файла конфигурации
 def save_config(file_name, config_data):
@@ -31,9 +34,11 @@ def save_config(file_name, config_data):
     except IOError:
         return False
 
+
 def get_db_path():
     from app import app_path  # импортируем app_path локально, чтобы избежать циклического импорта
     return os.path.join(app_path, 'data', 'data.db')
+
 
 def query_main_active_location():
     db_path = get_db_path()
@@ -57,6 +62,7 @@ def query_main_active_location():
         print(f"Ошибка при работе с базой данных: {e}")
         return None
 
+
 # Маршрут для получения начальной конфигурации
 
 
@@ -66,6 +72,7 @@ def get_init_config():
     if images_dir is None:
         return jsonify({"error": "No active main location found"}), 404
     return jsonify({"map": images_dir})
+
 
 # Маршрут для получения конфигурации карты по названию
 @config_bp.route('/configs', defaults={'map_name': None}, methods=['GET'])
@@ -83,6 +90,7 @@ def get_map_config(map_name):
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
     return jsonify(map_config)
+
 
 # Маршрут для установки конфигурации окружения
 @config_bp.route('/config/ambience', methods=['POST'])
@@ -103,6 +111,7 @@ def set_ambience_config():
 
     return jsonify(map_config)
 
+
 # Маршрут для установки начальной конфигурации
 @config_bp.route('/config/init', methods=['POST'])
 def update_init_config():
@@ -114,6 +123,8 @@ def update_init_config():
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
     # Обновляем начальные параметры конфигурации
+    setTimer = data.get('round') != map_config['init']['round']
+
     map_config['init'] = {
         'round': data.get('round'),
         'try': data.get('try'),
@@ -122,12 +133,14 @@ def update_init_config():
         'next': data.get('next'),
     }
     map_config['lastUpdated'] = int(time.time())
-    map_config['timer'] = int(time.time() + 60)
+    if setTimer:
+        map_config['timer'] = int(time.time() + 60)
 
     if not save_config(map_name, map_config):
         return jsonify({"error": f"Error saving updated configuration to '{map_name}.json'"}), 500
 
     return jsonify(map_config)
+
 
 # Маршрут для получения начальной конфигурации init
 @config_bp.route('/config/init', methods=['GET'])

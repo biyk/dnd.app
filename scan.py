@@ -28,7 +28,7 @@ def collect_project_code(root_dir, output_file, include_extensions=None, ignore_
                     try:
                         with open(file_path, "r", encoding="utf-8") as f:
                             code = f.read()
-                        out_file.write(f"Код {relative_path}:\n")
+                        out_file.write(f"---------------Код {relative_path}:\n")
                         out_file.write(code + "\n\n")
                     except Exception as e:
                         out_file.write(f"Не удалось прочитать файл {relative_path}: {e}\n\n")
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     ROOT_DIR = os.getcwd()  # Текущая директория
     OUTPUT_FILE = "project_code.txt"  # Имя выходного файла
     INCLUDE_EXTENSIONS = [".py", ".js", ".html"]  # Типы файлов для включения
+    INCLUDE_EXTENSIONS = [".py"]  # Типы файлов для включения
     IGNORE_DIRS = [".git", "venv", "node_modules","build","utils", "migrations", "static\js\external", "static\css\external"]  # Игнорируемые директории
 
     IGNORE_DIRS_FULL_PATH = [os.path.join(ROOT_DIR, d) for d in IGNORE_DIRS]
