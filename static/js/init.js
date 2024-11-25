@@ -125,6 +125,7 @@ class InitiativeManager {
 
             const infoButton = document.createElement('button');
             infoButton.textContent = 'i';
+            infoButton.classList.add('js-info');
             infoButton.onclick = () => this.infoCharacter(character.name);
 
             row.append(nameSpan, initSpan, cdSpan, hpSpan, surpriseLabel, npcLabel, expSpan, deleteButton, healButton, infoButton);

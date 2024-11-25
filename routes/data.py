@@ -4,20 +4,19 @@ from flask import request, render_template, send_file
 from bs4 import BeautifulSoup  # Убедитесь, что библиотека установлена
 import sqlite3
 
-from units.database import get_main_location, fetch_monsters_by_name, fetch_npc_by_name, delete_npc, add_npc
+from units.crud_helpers import insert_record, delete_record, update_record
+from units.database import get_main_location, fetch_monsters_by_name, fetch_npc_by_name, delete_npc, add_npc, \
+    record_exists, get_db_connection
 
 app = Flask(__name__)
 
 DATABASE = "data/data.db"
 
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
 data_bp = Blueprint('data', __name__)
 
+
 @data_bp.route('/data/monsters/json', methods=['GET'])
+# Поиск монстров (tested)
 def get_monsters():
     name_query = request.args.get('name', '').strip()
     if not name_query:
@@ -26,7 +25,9 @@ def get_monsters():
     results = fetch_monsters_by_name(name_query)
     return jsonify([dict(row) for row in results])
 
+
 @data_bp.route('/data/monsters/html', methods=['GET'])
+# Получаем информацию о монстре из базы dnd.su (tested)
 def get_monsters_html():
     html_dir = './utils/dndsu'
     name_query = request.args.get('name', '').strip()
@@ -48,7 +49,7 @@ def get_monsters_html():
     # Работаем с первым результатом (или можно сделать цикл для всех)
     for monster in monsters:
         url = monster.get('url')
-        if not url or monster.get('name')!=name_query:
+        if not url or monster.get('name') != name_query:
             continue  # Пропускаем, если URL отсутствует
 
         # Преобразуем URL в имя файла
@@ -71,8 +72,8 @@ def get_monsters_html():
     return "HTML-файл не найден или блок отсутствует " + html_filepath, 404
 
 
-
 @data_bp.route('/data/location', methods=['GET'])
+# Получаем список локаций
 def get_locations():
     parent_id = request.args.get('parent_id', type=int)
     type_filter = request.args.get('type', '')
@@ -98,7 +99,9 @@ def get_locations():
 
     return jsonify([dict(row) for row in results])
 
+
 @data_bp.route('/data/location', methods=['POST'])
+# Добавляем локацию (tested)
 def add_location():
     data = request.get_json()
     name = data.get('name', '').strip()
@@ -111,60 +114,54 @@ def add_location():
         if not main_location:
             return jsonify({"error": "Нет активной основной локации"}), 400
 
-        parent_id = main_location['id']
-        conn.execute("""
-            INSERT INTO locations (name, type, parent_id, active)
-            VALUES (?, 'second', ?, 1)
-        """, (name, parent_id))
-        conn.commit()
+    insert_record('locations', {
+        'name': name,
+        'type': 'second',
+        'parent_id': main_location['id'],
+        'active': 1
+    })
 
     return jsonify({"message": "Локация успешно добавлена"}), 201
 
+
 @data_bp.route('/data/location/remove', methods=['POST'])
+# удаляем локацию (tested)
 def remove_location():
     data = request.get_json()
-    location = data.get('location')
-    if not location:
+    location_id = data.get('location')
+    if not location_id:
         return jsonify({"error": "id локации обязательно"}), 400
 
-    with get_db_connection() as conn:
-        result = conn.execute("""
-            SELECT id FROM locations WHERE id = ?
-        """, (location,)).fetchone()
+    if not record_exists("locations", "id", location_id):
+        return jsonify({"error": "Локация не найдена"}), 404
 
-        if not result:
-            return jsonify({"error": "Локация не найдена"}), 404
-
-        conn.execute("DELETE FROM locations WHERE id = ?", (location,))
-        conn.execute("DELETE FROM location_npc WHERE location_id = ?", (location,))
-        conn.commit()
+    delete_record('locations', {'id': location_id})
+    delete_record('location_npc', {'location_id': location_id})
 
     return jsonify({"message": "Локация успешно удалена"}), 200
+
+
 @data_bp.route('/data/location/update', methods=['POST'])
+# Обновляем локацию (tested)
 def update_location():
     data = request.get_json()
-    location = data.get('location')
+    location_id = data.get('location')
     name = data.get('name')
 
-    if not location:
+    if not location_id:
         return jsonify({"error": "id локации обязательно"}), 400
     if not name:
         return jsonify({"error": "Имя локации обязательно"}), 400
 
-    with get_db_connection() as conn:
-        result = conn.execute("""
-            SELECT id FROM locations WHERE id = ?
-        """, (location,)).fetchone()
+    if not record_exists("locations", "id", location_id):
+        return jsonify({"error": "Локация не найдена"}), 404
 
-        if not result:
-            return jsonify({"error": "Локация не найдена"}), 404
-
-        conn.execute("UPDATE locations SET name = ? WHERE id = ?", (name, location,))
-        conn.commit()
-
+    update_record('locations', {'name': name}, {'id': location_id})
     return jsonify({"message": "Локация успешно обновлена"}), 200
 
+
 @data_bp.route('/data/locations/npc/', methods=['GET'])
+# Получаем НПС локации
 def get_location_npc():
     location_id = request.args.get('location_id', type=int)
     if not location_id:
@@ -183,7 +180,9 @@ def get_location_npc():
 
     return jsonify([dict(row) for row in monsters])
 
+
 @data_bp.route('/data/locations/npc/add', methods=['POST'])
+# Добавляем НПС в локацию
 def add_location_npc():
     data = request.get_json()
     location_id = data.get('location_id')
@@ -206,7 +205,9 @@ def add_location_npc():
 
     return jsonify({"message": "Связь успешно добавлена"}), 201
 
+
 @data_bp.route('/data/locations/npc/remove', methods=['POST'])
+# Уаляем НПС из локации
 def remove_location_npc():
     data = request.get_json()
     location_id = data.get('location_id')
@@ -250,11 +251,13 @@ def get_custom_npc():
     results = fetch_npc_by_name(name)
     return jsonify([dict(row) for row in results])
 
+
 @data_bp.route('/data/npc/delete/<int:id>', methods=['DELETE'])
 def delete_custom_npc(id):
     if delete_npc(id):
         return jsonify({"message": f"Персонаж с ID {id} успешно удалён"}), 200
     return jsonify({"error": "Персонаж не найден"}), 404
+
 
 @data_bp.route('/data/npc/update/', methods=['POST'])
 def update_custom_npc():

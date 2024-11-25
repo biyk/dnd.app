@@ -146,8 +146,7 @@ export async function init(sleeper) {
          const npcInput = document.getElementById('npc-input');
          const npcList = document.getElementById('npc-list');
          // Шаг 2: Вводим имя монстра в строку поиска
-         const searchQuery = "Гоблин"; // Используйте имя, которое точно есть в базе данных монстров
-         npcInput.value = searchQuery;
+         npcInput.value = "Гоблин";
          npcInput.dispatchEvent(new Event('input'));
          // Ожидаем обновления списка монстров после поиска
          await sleep(300 + sleeper);
@@ -165,8 +164,33 @@ export async function init(sleeper) {
                  const hpNowInput = document.getElementById('new-hp-now');
                  const hpMaxInput = document.getElementById('new-hp-max');
                  const expInput = document.getElementById('new-experience');
+                 const newInit = document.getElementById('new-init');
                  if (nameInput.value) {
                      console.log("✓ Данные монстра подставились в форму корректно");
+
+                     newInit.value = 40;
+                     document.getElementById('add-character-button').click();
+                     await sleep(sleeper);
+                     const firstNpcInfo = document.querySelector('.character-row.character-npc .js-info');
+                     firstNpcInfo.click();
+                     await sleep(sleeper);
+                     if (document.querySelector('.popup-overlay') && document.querySelector('.card__article-body')) {
+                          console.log("✓ Попап отобразился");
+
+                          await sleep(sleeper);
+                          const closeButton = document.querySelector('.popup-close-btn');
+                          closeButton.click();
+                          await sleep(sleeper);
+                          if (!document.querySelector('.popup-overlay')){
+                              console.log("✓ Попап Закрылся");
+                              manager.deleteCharacter(0);
+                              await sleep(sleeper);
+                          } else {
+                              exit("✗ Попап не закрылся");
+                          }
+                     } else {
+                          exit("✗ Попап не отобразился");
+                     }
                  } else {
                      exit("✗ Данные монстра не подставились в форму");
                  }

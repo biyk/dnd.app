@@ -54,3 +54,9 @@ def delete_npc(id):
         conn.execute("DELETE FROM npc WHERE id = ?", (id,))
         conn.commit()
         return True
+
+def record_exists(table, column, value):
+    """Проверяет, существует ли запись в таблице"""
+    query = f"SELECT 1 FROM {table} WHERE {column} = ?"
+    with get_db_connection() as conn:
+        return conn.execute(query, (value,)).fetchone() is not None

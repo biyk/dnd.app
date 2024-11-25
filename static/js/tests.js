@@ -9,7 +9,7 @@ const tests = { empty, tab, init, location };
 
 export async function test(testing = 'all') {
     console.log("=== Начало тестирования ===");
-    await fetch('/api/test/start');
+    //await fetch('/api/test/start');
     if (testing === 'all') {
         await empty(sleeper);
         await tab(sleeper);
@@ -22,7 +22,7 @@ export async function test(testing = 'all') {
         console.error(`Function "${testing}" does not exist.`);
     }
      console.info("=== Тестирование завершено ===");
-    await fetch('/api/test/end');
+    //await fetch('/api/test/end');
 }
 
 window.test = test;

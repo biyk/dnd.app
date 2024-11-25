@@ -67,6 +67,23 @@ export async function location(sleeper) {
         }
     })();
 
+    //Открыть тестовую локацию
+    console.log("=== Проверка редактирования локации ===");
+    await sleep(sleeper);
+    await (async () => {
+        let locationToOpen = manager.subLocationList.lastElementChild;
+        const testText = 'Отредактированная локация'
+        manager.editNameInput.value = testText;
+        await manager.editLocationName();
+        await sleep(sleeper);
+        locationToOpen = manager.subLocationList.lastElementChild;
+        if (locationToOpen.querySelector('.location-span').innerText===testText) {
+            console.log("✓ Локация успешно отредактирована");
+        } else {
+            exit("✗ Ошибка при Редактировании локации");
+        }
+    })();
+
 
     // Проверка поиска NPC
     console.log("=== Поиск NPC ===");

@@ -109,7 +109,6 @@ export class LocationManager {
                         </select>
                     </li>`).join('')
                 : '';
-            console.log(this.subLocationList.children);
         } catch (error) {
             console.error('Ошибка загрузки персонажей:', error);
         }
