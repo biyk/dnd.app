@@ -33,8 +33,9 @@ export class NpcManager {
         this.DisplayNpcList();
     }
 
-    addNpcAction (){
-        this.editNpcAction('add')
+    async addNpcAction() {
+        await this.editNpcAction('add');
+        this.npcForm.reset()
     }
     updateNpcAction (){
         this.addNpcButton.classList.remove('hidden');
@@ -108,10 +109,12 @@ export class NpcManager {
 
             npcItem.innerHTML = `
                 <div class="npc-details">
-                    <p onclick="window.initiativeManager.infoCharacter('${npc.template}')"><strong>Имя:</strong> ${npc.name}</p>
+                    <p onclick="window.initiativeManager.infoCharacter('${npc.template}')">
+                    <strong>Имя:</strong><span  class="js-npc-name">${npc.name}</span>
+                    </p>
                     <p><strong>HP:</strong> ${npc.hp}</p>
                     <p><strong>CD:</strong> ${npc.cd || 'N/A'}</p>
-                    <p><button onclick="window.NpcManager.editNpc('${npc.id}')">i</button></p>
+                    <p><button class="js-edit-npc" onclick="window.NpcManager.editNpc('${npc.id}')">i</button></p>
                 </div>
                 <button class="delete-btn" data-id="${npc.id}">Удалить</button>
             `;

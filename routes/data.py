@@ -73,7 +73,7 @@ def get_monsters_html():
 
 
 @data_bp.route('/data/location', methods=['GET'])
-# Получаем список локаций
+# Получаем список локаций (tested)
 def get_locations():
     parent_id = request.args.get('parent_id', type=int)
     type_filter = request.args.get('type', '')
@@ -161,7 +161,7 @@ def update_location():
 
 
 @data_bp.route('/data/locations/npc/', methods=['GET'])
-# Получаем НПС локации
+# Получаем НПС локации (tested)
 def get_location_npc():
     location_id = request.args.get('location_id', type=int)
     if not location_id:
@@ -182,7 +182,7 @@ def get_location_npc():
 
 
 @data_bp.route('/data/locations/npc/add', methods=['POST'])
-# Добавляем НПС в локацию
+# Добавляем НПС в локацию (tested)
 def add_location_npc():
     data = request.get_json()
     location_id = data.get('location_id')
@@ -207,7 +207,7 @@ def add_location_npc():
 
 
 @data_bp.route('/data/locations/npc/remove', methods=['POST'])
-# Уаляем НПС из локации
+# Уаляем НПС из локации (tested)
 def remove_location_npc():
     data = request.get_json()
     location_id = data.get('location_id')
@@ -229,6 +229,7 @@ def remove_location_npc():
 
 
 @data_bp.route('/data/npc/add', methods=['POST'])
+# Добавить НПС (tested)
 def add_custom_npc():
     data = request.form
     template = data.get('template')
@@ -246,6 +247,7 @@ def add_custom_npc():
 
 
 @data_bp.route('/data/npc', methods=['GET'])
+#получить информацию об одном или всех НПС (tested)
 def get_custom_npc():
     name = request.args.get('name', type=str)
     results = fetch_npc_by_name(name)
@@ -253,6 +255,7 @@ def get_custom_npc():
 
 
 @data_bp.route('/data/npc/delete/<int:id>', methods=['DELETE'])
+# удаление НПС (tested)
 def delete_custom_npc(id):
     if delete_npc(id):
         return jsonify({"message": f"Персонаж с ID {id} успешно удалён"}), 200
@@ -260,6 +263,7 @@ def delete_custom_npc(id):
 
 
 @data_bp.route('/data/npc/update/', methods=['POST'])
+# обновление НПС (tested)
 def update_custom_npc():
     data = request.form
     cd = data.get('cd')

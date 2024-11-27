@@ -2,8 +2,6 @@ import {calculateEncounterData, debounce, createEditableSpan} from './init/func.
 import {displayInfoBlocks,displayCurrentAndNextTurn, fillEditForm} from './init/display.js';
 import {loadInitiativeData, sendInit, infoCharacter} from './init/api.js';
 
-
-
 class InitiativeManager {
     constructor() {
         this.currentCharacterIndex = 0;

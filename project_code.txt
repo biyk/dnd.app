@@ -1,335 +1,2578 @@
+---------------Код static\js\ambience.js:
+// Функция для загрузки радиобаттонов и отправки данных на сервер
+async function loadAmbienceRadios() {
+    try {
+        const response = await fetch('/static/audio/ambience.json');
+        const data = await response.json();
+
+        let config = await fetch('/api/configs');
+        let idata = await config.json();
+        let ambience = idata.ambience;
+
+        const container = document.getElementById('ambience-tab');
+        Object.entries(data).forEach(([key, value]) => {
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'ambience';
+            radio.value = key;
+            radio.id = `radio-${key}`;
+            radio.checked = key===ambience;
+            const label = document.createElement('label');
+            label.htmlFor = `radio-${key}`;
+            label.textContent = value;
+            // Добавляем радио-кнопку и метку в контейнер
+            container.appendChild(radio);
+            container.appendChild(label);
+            // Добавляем обработчик для отправки значения на сервер при выборе радио-кнопки
+            radio.addEventListener('change', async () => {
+                try {
+                    await fetch('/api/config/ambience', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ ambience: radio.value })
+                    });
+                    console.log(`Отправлено значение: ${radio.value}`);
+                } catch (error) {
+                    console.error('Ошибка при отправке:', error);
+                }
+            });
+        });
+
+
+    } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+    }
+}
+loadAmbienceRadios();
+
+---------------Код static\js\init.js:
+import {calculateEncounterData, debounce, createEditableSpan} from './init/func.js';
+import {displayInfoBlocks,displayCurrentAndNextTurn, fillEditForm} from './init/display.js';
+import {loadInitiativeData, sendInit, infoCharacter} from './init/api.js';
+
+class InitiativeManager {
+    constructor() {
+        this.currentCharacterIndex = 0;
+        this.currentRound = 1;
+        this.charactersData = [];
+        this.rating = 0;
+        this.nextCharacterIndex = 0;
+
+        // Привязка обработчиков событий
+        this.addEventListeners();
+    }
+
+    // Функция для загрузки данных из JSON-файла
+    loadInitiativeData() {
+        loadInitiativeData.call(this);
+    }
+
+    displayInfoBlocks() {
+        displayInfoBlocks.call(this);
+    }
+
+    // Функция для отправки данных на сервер
+    sendInit() {
+        sendInit.call(this);
+    }
+
+    displayCharactersAndSendInit(){
+        this.displayCharacters();
+        this.sendInit();
+    }
+
+    // Универсальная функция для обновления свойств персонажа
+    updateCharacterProperty(index, property, value) {
+        this.charactersData[index][property] = value;
+        this.displayCharactersAndSendInit();
+    }
+
+    updateCharacterPropertyInit(index, property, value) {
+        while (!this.isUniqueInitiative(value)) {
+            value = (parseFloat(value) + 0.1).toFixed(1);
+        }
+        this.charactersData[index][property] = value;
+        this.displayCharactersAndSendInit();
+    }
+
+    // Переход к следующему персонажу
+    nextTurn() {
+        let characters = this.charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+        let _characters = characters;
+
+        if (this.currentRound === 0) {
+            characters = characters.filter(character => character.surprise === "true");
+        }
+
+        let next = characters.filter(character => parseFloat(character.init) < this.currentCharacterIndex)[0] || _characters[0];
+
+        this.currentCharacterIndex = next.init;
+        if (next.init == characters[0].init) {
+            this.currentRound++;
+        }
+
+        this.displayCharactersAndSendInit();
+    }
+
+    // Переход к предыдущему персонажу
+    prevTurn() {
+        let characters = this.charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+
+        if (this.currentRound === 0) {
+            characters = characters.filter(character => character.surprise === "true");
+        }
+
+        let currentIndex = characters.findIndex(character => parseFloat(character.init) === parseFloat(this.currentCharacterIndex));
+
+        if (currentIndex === 0) {
+            this.currentCharacterIndex = characters[characters.length - 1].init;
+            this.currentRound = Math.max(0, this.currentRound - 1);
+        } else {
+            this.currentCharacterIndex = characters[currentIndex - 1].init;
+        }
+
+        this.displayCharactersAndSendInit();
+    }
+
+
+    // Модифицированная функция для отображения строк персонажей с подсветкой текущего
+    displayCharacters() {
+        const container = document.getElementById('characters-container');
+        container.innerHTML = '';
+
+        let { encounterDifficulty } = calculateEncounterData(this.charactersData);
+        document.getElementById('battle-rating').textContent = encounterDifficulty;
+        this.rating = encounterDifficulty;
+        const characters = this.charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+
+        characters.forEach((character, index) => {
+            const row = document.createElement('div');
+            row.classList.add('character-row');
+            if (character.init === this.currentCharacterIndex) row.classList.add('current-turn');
+            row.classList.add(character.npc === 'true' ? 'character-npc' : 'character-player');
+
+            const nameSpan = createEditableSpan(`Имя: ${character.name}`, "name", index, this.updateCharacterProperty.bind(this));
+            const initSpan = createEditableSpan(`Init: ${character.init}`, "init", index, this.updateCharacterPropertyInit.bind(this));
+            const cdSpan = createEditableSpan(`КД: ${character.cd}`, "cd", index, this.updateCharacterProperty.bind(this));
+            const hpSpan = createEditableSpan(`HP: ${character.hp_now}`, "hp_now", index, this.updateCharacterProperty.bind(this),`/ ${character.hp_max}`);
+            const expSpanTitle = character.npc === 'true' ? 'DNG' : 'LVL';
+            const expSpan = createEditableSpan(`${expSpanTitle}: ${character.exp}`, "exp", index, this.updateCharacterProperty.bind(this));
+
+            const surpriseLabel = this.createCheckbox("Sur", character.surprise, index, 'surprise');
+            const npcLabel = this.createCheckbox("НПС", character.npc, index, 'npc');
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '-';
+            deleteButton.onclick = () => this.deleteCharacter(index);
+
+            const healButton = document.createElement('button');
+            healButton.textContent = '+';
+            healButton.onclick = () => this.healCharacter(index);
+
+            const infoButton = document.createElement('button');
+            infoButton.textContent = 'i';
+            infoButton.classList.add('js-info');
+            infoButton.onclick = () => this.infoCharacter(character.name);
+
+            row.append(nameSpan, initSpan, cdSpan, hpSpan, surpriseLabel, npcLabel, expSpan, deleteButton, healButton, infoButton);
+            container.appendChild(row);
+        });
+
+        displayCurrentAndNextTurn(this);
+    }
+
+    createCheckbox(labelText, isChecked, index, property) {
+        const label = document.createElement('label');
+        label.innerHTML = `${labelText}: <input type="checkbox" ${isChecked === "true" ? "checked" : ""} />`;
+        label.querySelector("input").onchange = (e) => {
+            this.updateCharacterProperty(index, property, e.target.checked ? 'true' : 'false');
+        };
+        return label;
+    }
+
+    // Функция сброса инициативы
+    resetInitiative() {
+        this.charactersData.forEach((character) => (character.init = '0'));
+        this.currentRound = 1;
+
+        this.displayCharactersAndSendInit();
+    }
+
+    // Функция восстановления здоровья
+    healCharacter(index) {
+        this.charactersData[index].hp_now = this.charactersData[index].hp_max;
+        this.displayCharactersAndSendInit();
+    }
+
+    // Функция удаления персонажа
+    deleteCharacter(index) {
+        this.charactersData.splice(index, 1);
+        this.displayCharactersAndSendInit();
+    }
+
+        // Метод для переключения видимости формы добавления персонажа
+    toggleAddCharacterForm() {
+        const form = document.getElementById('add-character-form');
+        form.style.display = form.style.display === 'none' || form.style.display === '' ? 'grid' : 'none';
+    }
+
+    // Метод проверки уникальности инициативы
+    isUniqueInitiative(init) {
+        return !this.charactersData.some(character => parseFloat(character.init) === parseFloat(init));
+    }
+
+    // Метод добавления нового персонажа
+    addCharacter() {
+        let init = document.getElementById('new-init').value;
+        const name = document.getElementById('new-name').value;
+        const cd = document.getElementById('new-cd').value;
+        const hpNow = document.getElementById('new-hp-now').value;
+        const hpMax = document.getElementById('new-hp-max').value;
+        const surprise = document.getElementById('new-surprise').checked;
+        const npc = document.getElementById('new-npc').checked;
+        const exp = document.getElementById('new-experience').value;
+
+        // Проверяем уникальность инициативы
+        while (!this.isUniqueInitiative(init)) {
+            init = (parseFloat(init) + 0.1).toFixed(1);
+        }
+
+        const newCharacter = {
+            init: init,
+            name: name,
+            cd: cd,
+            hp_now: hpNow,
+            hp_max: hpMax,
+            exp: exp,
+            surprise: surprise ? "true" : "false",
+            npc: npc ? "true" : "false"
+        };
+
+        this.charactersData.push(newCharacter);
+        this.toggleAddCharacterForm();
+        this.displayCharactersAndSendInit();
+    }
+
+    // Метод для заполнения формы редактирования данными
+    fillEditForm(data) {
+        fillEditForm(data);
+    }
+
+    // Добавление обработчиков событий
+    addEventListeners() {
+        if (typeof document !== "undefined") {
+            document.querySelector(".toggle-form-button.reset").addEventListener("click", this.resetInitiative.bind(this));
+            document.querySelector(".toggle-form-button.next").addEventListener("click", this.nextTurn.bind(this));
+            document.querySelector(".toggle-form-button.prev").addEventListener("click", this.prevTurn.bind(this));
+            document.querySelector(".toggle-form-button.add").addEventListener("click", this.toggleAddCharacterForm.bind(this)); // Новый обработчик
+            document.getElementById('add-character-button').addEventListener("click", this.addCharacter.bind(this)); // Обработчик добавления персонажа
+
+
+            // Изменяем обработчик для списка монстров
+            document.getElementById('npc-input').addEventListener(
+                'input',
+                debounce(async () => {
+                    const npcList = document.getElementById('npc-list');
+                    const input = document.getElementById('npc-input'); // Получаем input элемент
+                    const query = input.value.trim();
+                    if (query.length === 0) {
+                        npcList.innerHTML = '';
+                        return;
+                    }
+                    try {
+                        const response = await fetch(`/api/data/monsters/json?name=${encodeURIComponent(query)}`);
+                        if (!response.ok) throw new Error('Error fetching data');
+                        const data = await response.json();
+                        npcList.innerHTML = data.map((npc, index) => `<li data-index="${index}" data-json='${JSON.stringify(npc)}'>${npc.name}</li>`).join('');
+
+                        // Добавляем обработчики клика для каждого элемента списка
+                        Array.from(npcList.querySelectorAll('li')).forEach(li => {
+                            li.addEventListener('click', (event) => {
+                                const npcData = JSON.parse(event.target.getAttribute('data-json'));
+                                initiativeManager.fillEditForm(npcData); // Вызываем метод заполнения формы
+                            });
+                        });
+                    } catch (error) {
+                        console.error('Error:', error);
+                        npcList.innerHTML = '<li>Error loading NPCs</li>';
+                    }
+                }, 300) // Задержка 300 мс
+            );
+
+        }
+    }
+
+    infoCharacter(name) {
+        infoCharacter(name);
+    }
+}
+
+// Инициализация и запуск
+const initiativeManager = new InitiativeManager();
+window.initiativeManager = initiativeManager;
+initiativeManager.loadInitiativeData();
+export { InitiativeManager };
+
+---------------Код static\js\locations.js:
+import { debounce } from './init/func.js';
+import { loadMainLocations, loadSubLocations } from './locations/api.js';
+
+export class LocationManager {
+    constructor() {
+        const el = id => document.getElementById(id);
+        this.apiUrl = '/api/data/location';
+        this.mainLocationSelect = el('main-location');
+        this.subLocationList = el('sub-locations');
+        this.addLocationBtn = el('add-location-btn');
+        this.addLocationForm = el('add-location-form');
+        this.locationNameInput = el('location-name');
+        this.saveLocationBtn = el('save-location');
+        this.cancelLocationBtn = el('cancel-location');
+        this.editPopup = el('edit-popup');
+        this.closePopup = el('close-popup');
+        this.editNameInput = el('edit-name');
+        this.editNpcList = el('npc-list2');
+        this.searchNpcInput = el('loc-npc-input');
+        this.searchNpcResults = el('npc-search-results');
+        this.currentEditingLocationId = null;
+        this.init();
+    }
+
+    async init() {
+        await this.loadMainLocations();
+        this.mainLocationSelect.addEventListener('change', () => this.loadSubLocations());
+        this.addLocationBtn.addEventListener('click', () => this.toggleForm(true));
+        this.saveLocationBtn.addEventListener('click', () => this.addNewLocation());
+        this.cancelLocationBtn.addEventListener('click', () => this.toggleForm(false));
+        this.searchNpcInput.addEventListener('input', debounce(() => this.searchNpc(), 300));
+        this.editNameInput.addEventListener('keyup', debounce(() => this.editLocationName(), 300));//
+        this.closePopup.addEventListener('click', () => this.hideEditPopup());
+        this.mainLocationSelect.dispatchEvent(new Event('change'));
+    }
+
+    async loadMainLocations() {
+        await loadMainLocations.call(this);
+    }
+
+    hideEditPopup() {
+        this.editPopup.style.display = 'none';
+        this.currentEditingLocationId = null;
+    }
+
+    async loadSubLocations() {
+        await loadSubLocations.call(this);
+    }
+
+    async removeLocation(location) {
+        try {
+            const response = await fetch('/api/data/location/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location })
+            });
+            response.ok ? await this.loadSubLocations() : console.error('Ошибка при удалении локации');
+        } catch (error) {
+            console.error('Ошибка при удалении локации:', error);
+        }
+    }
+
+    toggleForm(show) {
+        this.addLocationForm.style.display = show ? 'block' : 'none';
+    }
+
+    async addNewLocation() {
+        const name = this.locationNameInput.value.trim();
+        if (!name) return console.error('Введите название локации');
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, parent_id: this.mainLocationSelect.value })
+            });
+            if (response.ok) {
+                this.toggleForm(false);
+                this.locationNameInput.value = '';
+                await this.loadSubLocations();
+            } else {
+                console.error('Ошибка при добавлении локации');
+            }
+        } catch (error) {
+            console.error('Ошибка при добавлении локации:', error);
+        }
+    }
+
+    async showEditPopup(location) {
+        this.currentEditingLocationId = location.ID;
+        this.editPopup.style.display = 'block';
+        this.editNameInput.value = location.name;
+        this.editNameInput.dataset.id = location.ID;
+        await this.loadNpcs(location.ID);
+    }
+
+    async loadNpcs(locationId) {
+        try {
+            const response = await fetch(`/api/data/locations/npc/?location_id=${locationId}`);
+            const data = await response.json();
+            this.editNpcList.innerHTML = data?.length
+                ? data.map(npc => `
+                    <li>
+                        <span>${npc.name}</span>
+                        <span class="location-del-npc" onclick="window.LocationManager.updateNpcInLocation(${npc.id}, 'remove')">X</span>
+                        <span class="move-npc-btn" onclick="window.LocationManager.showLocationSelect(${npc.id})">➡</span>
+                        <select class="npc-location-select hidden" data-npc-id="${npc.id}" onchange="window.LocationManager.moveNpcToNewLocation(${npc.id}, this.value)">
+                            <option>Выберите локацию</option>
+                            ${Array.from(this.subLocationList.children).map(loc => `<option value="${loc.dataset.locationId}">${loc.querySelector('.location-span').innerText}</option>`).join('')}
+                        </select>
+                    </li>`).join('')
+                : '';
+        } catch (error) {
+            console.error('Ошибка загрузки персонажей:', error);
+        }
+    }
+
+    async searchNpc() {
+        const query = this.searchNpcInput.value.trim();
+        if (!query) return (this.searchNpcResults.innerHTML = '');
+        try {
+            const response = await fetch(`/api/data/monsters/json?name=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            this.searchNpcResults.innerHTML = data?.length
+                ? data.map(npc => `<li data-monster-id="${npc.id}" onclick="window.LocationManager.updateNpcInLocation(${npc.id}, 'add')">${npc.name}</li>`).join('')
+                : '';
+        } catch (error) {
+            console.error('Ошибка поиска персонажей:', error);
+        }
+    }
+
+    async updateNpcInLocation(monsterId, action) {
+        if (!this.currentEditingLocationId) return;
+        const url = `/api/data/locations/npc/${action}`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location_id: this.currentEditingLocationId, monster_id: monsterId })
+            });
+            if (response.ok) {
+                await this.loadNpcs(this.currentEditingLocationId);
+                console.info(`Персонаж ${action === 'add' ? 'добавлен' : 'удален'} успешно`);
+            } else {
+                console.error(`Ошибка при ${action === 'add' ? 'добавлении' : 'удалении'} персонажа`);
+            }
+        } catch (error) {
+            console.error(`Ошибка при ${action === 'add' ? 'добавлении' : 'удалении'} персонажа:`, error);
+        }
+    }
+
+    showLocationSelect(npcId) {
+        const select = document.querySelector(`.npc-location-select[data-npc-id="${npcId}"]`);
+        select.classList.toggle('hidden');
+    }
+
+    async moveNpcToNewLocation(npcId, newLocationId) {
+        try {
+            // Удаление из текущей локации
+            await fetch('/api/data/locations/npc/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location_id: this.currentEditingLocationId, monster_id: npcId })
+            });
+
+            // Добавление в новую локацию
+            await fetch('/api/data/locations/npc/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location_id: newLocationId, monster_id: npcId })
+            });
+
+            await this.loadNpcs(this.currentEditingLocationId);
+            console.info('Персонаж успешно перемещен');
+        } catch (error) {
+            console.error('Ошибка перемещения персонажа:', error);
+        }
+    }
+
+    async editLocationName() {
+        const name = this.editNameInput.value.trim();
+        const location = this.editNameInput.dataset.id;
+        try {
+            const response = await fetch('/api/data/location/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name , location})
+            });
+            response.ok ? await this.loadSubLocations() : console.error('Ошибка при удалении локации');
+        } catch (error) {
+            console.error('Ошибка при удалении локации:', error);
+        }
+    }
+}
+
+window.LocationManager = new LocationManager();
+
+
+---------------Код static\js\npc.js:
+import { debounce } from './init/func.js';
+import { NpcApi } from './api/npc.js';
+
+export class NpcManager {
+    constructor() {
+        const el = id => document.getElementById(id);
+        this.apiUrl = '/api/data/location';
+        // Ссылки на элементы
+        this.searchNpcInput = el('npc-template-search');
+        this.searchNpcResults = el('template-npc-search-results');
+        this.addNpcButton = el('add-npc-button');
+        this.updateNpcButton = el('update-npc-button');
+        this.npcCd = el('npc-kd');
+        this.npcId = el('npc-id');
+        this.npcName = el('npc-name');
+        this.npcHp = el('npc-health');
+        this.npcTemplate = el('npc-template');
+        this.npcForm = el('npc-form');
+        this.monsters = new Map();
+        this.NpcApi = new NpcApi();
+        this.init();
+    }
+
+    async init() {
+        this.searchNpcInput.addEventListener('input', debounce(() => this.searchNpc(), 300));
+        this.addNpcButton.addEventListener('click', this.addNpcAction.bind(this));
+        this.updateNpcButton.addEventListener('click', this.updateNpcAction.bind(this));
+        await this.loadNpc()
+    }
+
+    async loadNpc() {
+        this.NpcList = await this.NpcApi.getNpc();
+        this.DisplayNpcList();
+    }
+
+    async addNpcAction() {
+        await this.editNpcAction('add');
+        this.npcForm.reset()
+    }
+    updateNpcAction (){
+        this.addNpcButton.classList.remove('hidden');
+        this.updateNpcButton.classList.add('hidden');
+
+        this.editNpcAction('update').then(r => this.npcForm.reset())
+    }
+
+    async editNpcAction(action='add') {
+        try {
+            const response = await fetch('/api/data/npc/'+action, {
+                method: 'POST',
+                body: new FormData(this.npcForm)
+            });
+            if (!response.ok) throw new Error('Ошибка при отправке формы');
+            const { message } = await response.json();
+            console.info(message);
+            await this.loadNpc();
+        } catch (error) {
+            alert('Произошла ошибка: ' + error.message);
+        }
+    }
+
+    async searchNpc() {
+        const query = this.searchNpcInput.value.trim();
+        if (!query) {
+            this.searchNpcResults.innerHTML = '';
+            return;
+        }
+        try {
+            const response = await fetch(`/api/data/monsters/json?name=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            this.monsters = new Map(data.map(npc => [npc.id, npc]));
+            this.searchNpcResults.innerHTML = data.length
+                ? data.map(npc => `<li data-monster-id="${npc.id}" onclick="window.NpcManager.useTemplate(${npc.id})">${npc.name}</li>`).join('')
+                : '';
+        } catch (error) {
+            console.error('Ошибка поиска персонажей:', error);
+        }
+    }
+
+    useTemplate(monsterId) {
+        const npc = this.monsters.get(monsterId);
+        if (npc) {
+            this.npcCd.value = npc.armor_class || '';
+            this.npcName.value = npc.name || '';
+            this.npcHp.value = npc.hit_points || '';
+            this.npcTemplate.value = npc.name || '';
+        } else {
+            console.error(`Шаблон NPC с ID ${monsterId} не найден`);
+        }
+    }
+
+    DisplayNpcList() {
+        const npcListContent = document.getElementById('npc-list-content'); // Получаем блок для отображения списка
+        if (!npcListContent) {
+            console.error('Элемент npc-list-content не найден');
+            return;
+        }
+
+        npcListContent.innerHTML = ''; // Очищаем содержимое перед обновлением
+
+        if (!this.NpcList || this.NpcList.length === 0) {
+            npcListContent.innerHTML = '<p>Список NPC пуст.</p>';
+            return;
+        }
+
+        this.NpcList.forEach(npc => {
+            const npcItem = document.createElement('div');
+            npcItem.classList.add('npc-item');
+
+            npcItem.innerHTML = `
+                <div class="npc-details">
+                    <p onclick="window.initiativeManager.infoCharacter('${npc.template}')">
+                    <strong>Имя:</strong><span  class="js-npc-name">${npc.name}</span>
+                    </p>
+                    <p><strong>HP:</strong> ${npc.hp}</p>
+                    <p><strong>CD:</strong> ${npc.cd || 'N/A'}</p>
+                    <p><button class="js-edit-npc" onclick="window.NpcManager.editNpc('${npc.id}')">i</button></p>
+                </div>
+                <button class="delete-btn" data-id="${npc.id}">Удалить</button>
+            `;
+
+            npcListContent.appendChild(npcItem);
+        });
+
+        // Добавляем обработчики событий для кнопок удаления
+        npcListContent.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', event => {
+                const npcId = event.target.getAttribute('data-id');
+                this.deleteNpc(npcId);
+            });
+        });
+    }
+
+    async deleteNpc(npcId) {
+        try {
+            const response = await fetch(`/api/data/npc/delete/${npcId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Ошибка удаления персонажа');
+            this.NpcList = this.NpcList.filter(npc => npc.id !== parseInt(npcId, 10)); // Обновляем локальный список
+            this.DisplayNpcList(); // Перерисовываем список
+        } catch (error) {
+            alert('Не удалось удалить персонажа: ' + error.message);
+        }
+    }
+
+    editNpc(id) {
+        // Ищем NPC в списке
+        const npc = this.NpcList.find(npc => npc.id === parseInt(id, 10));
+
+        if (!npc) {
+            console.error(`NPC с ID ${id} не найден`);
+            return;
+        }
+
+        // Заполняем форму данными NPC
+        this.npcCd.value = npc.cd || '';
+        this.npcName.value = npc.name || '';
+        this.npcHp.value = npc.hp || '';
+        this.npcTemplate.value = npc.template || '';
+        this.npcId.value = npc.id || '';
+        document.getElementById('npc-custom-text').value = npc.text || '';
+
+        // Переключаем видимость кнопок
+        this.addNpcButton.classList.add('hidden');
+        this.updateNpcButton.classList.remove('hidden');
+
+    }
+}
+
+window.NpcManager = new NpcManager();
+
+
+---------------Код static\js\script.js:
+import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
+import {createNumberedIcon, getParticipantHTML, updateInfoBar} from './script/helpers.js';
+import {checkTab} from './tabs.js';
+import {
+    createMainPolygon,
+    createPolygons,
+    setPolygonClickability,
+    toggleMainPolygonVisibility,
+    updateMainPolygon
+} from './script/poligons.js'
+import {SlideMenu} from './script/makrer.js'
+
+class MapManager {
+    constructor() {
+        this.mapName = ""; // Имя карты
+        this.mainPolygon = null; // Главный полигон
+        this.map = null; // Карта
+        this.polygons = []; // Массив для полигонов
+        this.polygonPoints = []; // Точки текущего полигона
+        this.polygonMarkers = []; // Маркеры точек полигона
+        this.markerCount = 0; // Счётчик маркеров
+        this.drawingMode = false; // Режим рисования
+        this.lastUpdated = 0; // Последняя временная метка
+        this.admin_mode = window.admin_mode || false; // Админ-режим
+        this.config = {};
+        this.SlideMenu =  {};
+        this.selectedIcon = null;
+        this.points = new Map();
+    }
+
+    async initMap() {
+        const init = await getInit();
+        if (!init) return;
+
+        this.mapName = init.map;
+        const config = await getConfig(this.mapName);
+        if (!config) return;
+        this.config = config;
+        this.lastUpdated = config.lastUpdated;
+        this.initializeMap(config);
+        this.createPolygons(config);
+        this.setDrawButtonHandler();
+        this.setReverseButtonHandler(config);
+        this.setMapEventHandlers();
+        this.initializeMarkerMenu();
+        updateInfoBar(config);
+        if (!this.admin_mode) setInterval(() => this.checkForConfigUpdates(), 1000);
+    }
+
+    initializeMap(config) {
+        const image = `/static/images/${config.image}`;
+        const { width, height, maxLevel, minLevel, orgLevel } = config;
+
+        const tileWidth = 256 * Math.pow(2, orgLevel);
+        const radius = tileWidth / 2 / Math.PI;
+        const rx = width - tileWidth / 2;
+        const ry = -height + tileWidth / 2;
+        const west = -180;
+        const east = (180 / Math.PI) * (rx / radius);
+        const north = 85.05;
+        const south = (360 / Math.PI) * (Math.atan(Math.exp(ry / radius)) - Math.PI / 4);
+        const bounds = [[south, west], [north, east]];
+
+        const mapOptions = {
+            maxBounds: bounds,
+              zoomControl: this.admin_mode,
+            /*
+            dragging: this.admin_mode,
+
+            scrollWheelZoom: this.admin_mode,
+            doubleClickZoom: this.admin_mode,
+            touchZoom: this.admin_mode,
+            keyboard: this.admin_mode,
+             */
+        };
+
+        this.map = L.map('map', mapOptions);
+        L.tileLayer(image + '/{z}-{x}-{y}.jpg', {
+            maxZoom: maxLevel,
+            minZoom: minLevel,
+            noWrap: true,
+            bounds: bounds,
+            attribution: '<a href="https://github.com/oliverheilig/LeafletPano">LeafletPano</a>',
+        }).addTo(this.map);
+
+        this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
+    }
+
+    createPolygons(config) {
+        createPolygons.call(this,config)
+    }
+
+    createPolygonClickHandler(polygonLayer) {
+        if (this.admin_mode) {
+            return (e) => {
+                if (e.originalEvent.ctrlKey) {
+                    this.map.removeLayer(polygonLayer);
+                    this.polygons = this.polygons.filter(p => p.layer !== polygonLayer);
+                    this.sendPolygonsData();
+                } else {
+                    polygonLayer.isVisible = !polygonLayer.isVisible;
+                    polygonLayer.setStyle({
+                        fillOpacity: polygonLayer.isVisible ? 1.0 : 0.0,
+                        opacity: polygonLayer.isVisible ? 1.0 : 0.0,
+                    });
+                    this.sendPolygonsData();
+                }
+            };
+        }
+    }
+
+    sendPolygonsData() {
+        sendPolygonsData.call(this);
+    }
+
+    setDrawButtonHandler() {
+        const drawButton = document.getElementById('draw-button');
+        if (!drawButton) return;
+
+        drawButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.drawingMode = !this.drawingMode;
+            drawButton.textContent = this.drawingMode ? "Finish Drawing" : "Draw Polygon";
+
+            if (this.drawingMode) {
+                this.setPolygonsOpacity(0.6);
+                this.setPolygonClickability(false);
+            } else {
+                this.setPolygonsOpacity(1.0);
+                this.setPolygonClickability(true);
+
+                if (this.polygonPoints.length > 2) {
+                    this.createNewPolygon();
+                    this.sendPolygonsData();
+                }
+            }
+        });
+    }
+
+    setReverseButtonHandler(config) {
+        const reverseButton = document.getElementById('reverse-button');
+        if (!reverseButton) return;
+
+        reverseButton.addEventListener('click', () => {
+            if (this.mainPolygon) {
+                this.updateMainPolygon(config);
+                this.toggleMainPolygonVisibility();
+            } else {
+                this.createMainPolygon(config);
+            }
+        });
+    }
+
+    createNewPolygon() {
+        const polygonLayer = L.polygon(this.polygonPoints, {
+            color: 'black',
+            fillColor: 'black',
+            fillOpacity: 1.0,
+            weight: 1,
+        }).addTo(this.map);
+
+        polygonLayer.isVisible = true;
+        polygonLayer.clickHandler = this.createPolygonClickHandler(polygonLayer);
+        polygonLayer.on('click', polygonLayer.clickHandler);
+
+        this.polygons.push({
+            layer: polygonLayer,
+            points: this.polygonPoints,
+            isVisible: polygonLayer.isVisible,
+        });
+
+        this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
+        this.polygonMarkers = [];
+        this.polygonPoints = [];
+        this.markerCount = 0;
+    }
+
+    toggleMainPolygonVisibility() {
+        toggleMainPolygonVisibility.call(this);
+    }
+
+    createMainPolygon(config) {
+        createMainPolygon.call(this,config)
+    }
+
+    updateMainPolygon(config) {
+        updateMainPolygon.call(this, config);
+    }
+
+    async checkForConfigUpdates() {
+        await checkForConfigUpdates.call(this);
+    }
+
+    setPolygonsOpacity(opacity) {
+        this.polygons.forEach(polygon => polygon.layer.setStyle({ fillOpacity: opacity, opacity: opacity }));
+    }
+
+    setPolygonClickability(clickable) {
+        setPolygonClickability.call(this,clickable)
+    }
+
+    setMapEventHandlers() {
+        this.map.on('zoomend', ()=>{
+            this.sendPolygonsData();
+        });
+
+        this.map.on('movestart', ()=>{
+            document.getElementById('map').style.opacity = '0';
+        });
+        this.map.on('moveend', ()=>{
+            this.sendPolygonsData();
+            document.getElementById('map').style.opacity = '1';
+
+        });
+
+        this.map.on('click', (e) => {
+            if (this.drawingMode) {
+                this.markerCount += 1;
+                this.polygonPoints.push([e.latlng.lat, e.latlng.lng]);
+
+                const marker = L.marker([e.latlng.lat, e.latlng.lng], { icon: createNumberedIcon(this.markerCount) }).addTo(this.map);
+                this.polygonMarkers.push(marker);
+            }
+        });
+
+        this.map.on('click', (e) => {
+            if (this.selectedIcon) {
+                // Размещаем маркер с выбранной иконкой
+                let id = new Date().getTime();
+                const marker = L.marker(e.latlng, {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div data-id>${this.selectedIcon.emoji}</div>`,
+                    }),
+                    draggable: true
+                }).addTo(this.map);
+                marker.bindPopup(`
+                   <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
+                 `);
+
+                this.points.set(id, marker);
+                // Сбрасываем выбранную иконку
+                this.selectedIcon = null;
+                document.querySelector('.marker-menu').style.display = 'block'; // Показываем сайдбар
+                console.log(
+                    Array.from(this.points)
+                )
+            }
+        });
+
+        this.map.whenReady(this.whenReady);
+
+        let markerButton = document.getElementById('marker-button');
+        if (markerButton) {
+            markerButton.addEventListener('click', (e) => {
+                const sidebar = document.querySelector('.marker-menu');
+                sidebar.style.right = sidebar.style.right === '0px' ? '-33%' : '0px';
+            })
+        }
+
+    }
+
+    whenReady(){
+        checkTab();
+        this.SlideMenu =  new SlideMenu();
+        this.SlideMenu.initializeMapMarkers(this.map);
+    }
+
+    removeMarker(index) {
+        const marker = this.points.get(index);
+        if (marker) {
+            window.mapManager.map.removeLayer(marker);
+            this.points.delete(index);
+        }
+    }
+
+    updateInfoBar(data) {
+        const infoBar = document.getElementById('info-bar');
+        if (!infoBar) return;
+        const round = data.init.round;
+        const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
+        const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
+        const participants = data.init.all;
+
+        // Сортируем участников по инициативе
+        const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
+
+        // Находим текущий и следующий ход
+        const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
+        const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
+        const current = sortedParticipants[currentIndex] || null;
+        const next = sortedParticipants[nextIndex] || null;
+
+
+        // Обновляем информационную строку
+        infoBar.innerHTML = `
+      Раунд: <span>${round}</span>,
+      Ход: ${current ? getParticipantHTML(current) : '---'},
+      Следующий: ${next ? getParticipantHTML(next) : '---'}
+    `;
+    }
+
+    initializeMarkerMenu() {
+        const sidebar = document.createElement('div');
+        sidebar.classList.add('marker-menu');
+        this.menu = sidebar;
+        const icons = [{ name: "Человечек", emoji: "👤" },
+            { name: "Дерево", emoji: "🌳" },
+            { name: "Черепушка", emoji: "💀" },];
+        const list = document.createElement('ul');
+        // Создаем кнопки для каждой иконки
+        icons.forEach(icon => {
+            const button = document.createElement('button');
+            button.textContent = `${icon.emoji} ${icon.name}`;
+            button.addEventListener('click', () => {
+                this.selectedIcon = icon; // Запоминаем выбранную иконку
+                sidebar.style.display = 'none'; // Скрываем сайдбар
+            });
+            list.appendChild(button);
+        });
+        sidebar.appendChild(list);
+        document.body.appendChild(sidebar);
+    }
+
+}
+
+const mapManager = new MapManager();
+window.mapManager = mapManager;
+mapManager.initMap();
+
+
+---------------Код static\js\skull.js:
+    let flashingInterval;
+
+    function updateSkullColor(color=3) {
+        const skull = document.getElementById('skull');
+        clearInterval(flashingInterval); // Очистка предыдущего интервала
+        function flashColors() {
+            const colors = ['green', 'yellow', 'red', 'blue', 'purple'];
+            let index = 0;
+
+            flashingInterval = setInterval(() => {
+                skull.style.color = colors[index];
+                index = (index + 1) % colors.length;
+            }, 500); // Изменение цвета каждые 500 миллисекунд
+        }
+        switch (color) {
+            case 0:
+                skull.style.color = 'green';
+                break;
+            case 1:
+                skull.style.color = 'yellow';
+                break;
+            case 2:
+                skull.style.color = 'red';
+                break;
+            case 3:
+                flashColors();
+                break;
+            default:
+                skull.style.color = 'black'; // По умолчанию
+        }
+    }
+
+
+
+---------------Код static\js\tabs.js:
+// Функция для отображения выбранной вкладки
+export function showTab(tabId) {
+    // Скрываем все вкладки и деактивируем кнопки
+    document.querySelectorAll('.tab-content').forEach(function(tab) {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-button').forEach(function(button) {
+        button.classList.remove('active');
+    });
+
+    // Показываем выбранную вкладку и активируем кнопку
+    document.getElementById(tabId).classList.add('active');
+    document.getElementById(tabId+'-controls')?.classList.add('active');
+    location.hash = tabId
+}
+
+export function checkTab() {
+    let tabId = window.location.hash.replace('#','');
+    if (document.getElementById(tabId)){
+        showTab(tabId);
+    }
+}
+
+window.showTab = showTab;
+
+---------------Код static\js\tests.js:
+import {init} from "./test/init.js";
+import {empty} from "./test/empty.js";
+import {tab} from "./test/tab.js";
+import {location} from "./test/location.js";
+import {npc} from "./test/npc.js";
+import {map} from "./test/map.js";
+const sleeper = 200;
+
+// Объект с функциями
+const tests = { empty, tab, init, location, npc, map};
+
+export async function test(testing = 'all') {
+    console.log("=== Начало тестирования ===");
+    //await fetch('/api/test/start');
+    if (testing === 'all') {
+        await empty(sleeper);
+        await tab(sleeper);
+        await init(sleeper);
+        await location(sleeper);
+        await npc(sleeper);
+    } else if (typeof tests[testing] === 'function') {
+        // Вызываем функцию из объекта tests
+        await tests[testing](sleeper);
+    } else {
+        console.error(`Function "${testing}" does not exist.`);
+    }
+     console.info("=== Тестирование завершено ===");
+    //await fetch('/api/test/end');
+}
+
+window.test = test;
+
+---------------Код static\js\textarea.js:
+    const textarea = document.getElementById('dynamic-text');
+
+    // Функция debounce, которая задерживает выполнение функции
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout); // Очищаем предыдущий таймер
+            timeout = setTimeout(() => func.apply(this, args), delay); // Устанавливаем новый таймер
+        };
+    }
+
+    // Функция отправки данных
+    function sendData() {
+        const data = { text: textarea.value }; // Подготавливаем данные для отправки
+
+        fetch('/api/config/dm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => console.log('Успешный ответ от сервера:', data))
+        .catch(error => console.error('Ошибка при отправке:', error));
+    }
+
+    // Создаем обертку sendData с дебаунсом на 500 мс
+    const debouncedSendData = debounce(sendData, 500);
+
+    // Вызываем debouncedSendData при каждом событии 'input'
+    textarea.addEventListener('input', debouncedSendData);
+
+    // Функция для загрузки данных при старте
+    function loadData() {
+        fetch('/api/config/dm', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Если данные получены, заполняем textarea
+            textarea.value = data.join('\n');
+        })
+        .catch(error => console.error('Ошибка при загрузке данных:', error));
+    }
+
+    // Загружаем данные при загрузке страницы
+    loadData();
+
+---------------Код static\js\time.js:
+class FaerunCalendar {
+    constructor() {
+        this.months = [
+            {
+                nameEn: "Hammer",
+                nameRu: "Хаммер (Hammer)",
+                nicknameEn: "Deepwinter",
+                nicknameRu: "Разгар зимы (Deepwinter)",
+                days: 30
+            },
+            {
+                nameEn: "Alturiak",
+                nameRu: "Альтуриак (Alturiak)",
+                nicknameEn: "The Claw of Winter",
+                nicknameRu: "Коготь зимы (The Claw of Winter)",
+                days: 30
+            },
+            {
+                nameEn: "Ches",
+                nameRu: "Чес (Ches)",
+                nicknameEn: "of the Sunsets",
+                nicknameRu: "Месяц закатов (of the Sunsets)",
+                days: 30
+            },
+            {
+                nameEn: "Tarsakh",
+                nameRu: "Тарсах (Tarsakh)",
+                nicknameEn: "of the Storms",
+                nicknameRu: "Месяц гроз (of the Storms)",
+                days: 30
+            },
+            {
+                nameEn: "Mirtul",
+                nameRu: "Миртул (Mirtul)",
+                nicknameEn: "The Melting",
+                nicknameRu: "Месяц таяния снегов (The Melting)",
+                days: 30
+            },
+            {
+                nameEn: "Kythorn",
+                nameRu: "Киторн (Kythorn)",
+                nicknameEn: "The Time of Flowers",
+                nicknameRu: "Время цветов (The Time of Flowers)",
+                days: 30
+            },
+            {
+                nameEn: "Flamerule",
+                nameRu: "Флеймрул (Flamerule)",
+                nicknameEn: "Summertide",
+                nicknameRu: "Разгар лета (Summertide)",
+                days: 30
+            },
+            {
+                nameEn: "Elesias",
+                nameRu: "Элесиас (Elesias)",
+                nicknameEn: "Highsun",
+                nicknameRu: "Солнце в зените (Highsun)",
+                days: 30
+            },
+            {
+                nameEn: "Eleint",
+                nameRu: "Элейнт (Eleint)",
+                nicknameEn: "The Fading",
+                nicknameRu: "Угасание (The Fading)",
+                days: 30
+            },
+            {
+                nameEn: "Marpenoth",
+                nameRu: "Марпенот (Marpenoth)",
+                nicknameEn: "Leaffall",
+                nicknameRu: "Листопад (Leaffall)",
+                days: 30
+            },
+            {
+                nameEn: "Uktar",
+                nameRu: "Уктар (Uktar)",
+                nicknameEn: "The Rotting",
+                nicknameRu: "Умирание (The Rotting)",
+                days: 30
+            },
+            {
+                nameEn: "Nightal",
+                nameRu: "Найтол (Nightal)",
+                nicknameEn: "The Drawing Down",
+                nicknameRu: "Завершение года (The Drawing Down)",
+                days: 30
+            },
+        ];
+
+        this.specialDays = [
+            { nameEn: "Midwinter", nameRu: "Макушка зимы (Midwinter)", dayOfYear: 31 },
+            { nameEn: "Greengrass", nameRu: "День Зеленой травы (Greengrass)", dayOfYear: 122 },
+            { nameEn: "Midsummer", nameRu: "Солнцеворот (Midsummer)", dayOfYear: 213 },
+            { nameEn: "Shieldmeet", nameRu: "День Щитового схода (Shieldmeet)", dayOfYear: 214 },
+            { nameEn: "Highharvestide", nameRu: "Праздник урожая (Highharvestide)", dayOfYear: 274 },
+            { nameEn: "The Feast of the Moon", nameRu: "Пир Луны (The Feast of the Moon)", dayOfYear: 334 },
+        ];
+
+        this.daysInYear = 365;
+        this.currentDayOfYear = 1;
+        this.currentYear = 1372;
+        this.format = "nameRu"; // Настройка формата вывода: nameRu, nameEn, nicknameRu, nicknameEn
+    }
+
+    setFormat(format) {
+        const validFormats = ["nameRu", "nameEn", "nicknameRu", "nicknameEn"];
+        if (!validFormats.includes(format)) {
+            throw new Error("Invalid format. Choose one of: " + validFormats.join(", "));
+        }
+        this.format = format;
+    }
+
+    getCurrentDay() {
+        return this.currentDayOfYear;
+    }
+
+    getCurrentYear() {
+        return this.currentYear;
+    }
+
+    getCurrentMonth() {
+        let remainingDays = this.currentDayOfYear;
+        for (const month of this.months) {
+            if (remainingDays <= month.days) {
+                return month[this.format];
+            }
+            remainingDays -= month.days;
+        }
+
+        const specialDay = this.specialDays.find(day => day.dayOfYear === this.currentDayOfYear);
+        if (specialDay) {
+            return specialDay[this.format];
+        }
+
+        return null;
+    }
+
+    calculateDate(offset) {
+        let newDayOfYear = (this.currentDayOfYear + offset) % this.daysInYear;
+        if (newDayOfYear <= 0) newDayOfYear += this.daysInYear;
+
+        let newYear = this.currentYear + Math.floor((this.currentDayOfYear + offset) / this.daysInYear);
+        return this.getDateFromDayOfYear(newDayOfYear, newYear);
+    }
+
+    getDateInFuture(days) {
+        return this.calculateDate(days);
+    }
+
+    getDateInPast(days) {
+        return this.calculateDate(-days);
+    }
+
+    getDateFromDayOfYear(dayOfYear, year) {
+        let remainingDays = dayOfYear;
+        for (const month of this.months) {
+            if (remainingDays <= month.days) {
+                return { day: remainingDays, month: month[this.format], year };
+            }
+            remainingDays -= month.days;
+        }
+
+        const specialDay = this.specialDays.find(day => day.dayOfYear === dayOfYear);
+        if (specialDay) {
+            return { day: specialDay[this.format], month: null, year };
+        }
+
+        return null;
+    }
+
+    setCurrentDate(dayOfYear, year) {
+        if (dayOfYear < 1 || dayOfYear > this.daysInYear) {
+            throw new Error("Invalid day of the year.");
+        }
+        this.currentDayOfYear = dayOfYear;
+        this.currentYear = year;
+    }
+}
+
+// Пример использования
+const faerunCalendar = new FaerunCalendar();
+faerunCalendar.setCurrentDate(45, 1372); // Устанавливаем 45-й день 1372 года
+faerunCalendar.setFormat("nameRu"); // Устанавливаем формат вывода на русский (официальное название)
+
+console.log(faerunCalendar.getCurrentDay()); // Текущий день
+console.log(faerunCalendar.getCurrentMonth()); // Текущий месяц в выбранном формате
+console.log(faerunCalendar.getDateInFuture(50)); // Дата через 50 дней
+console.log(faerunCalendar.getDateInPast(30)); // Дата 30 дней назад
+
+---------------Код static\js\timer.js:
+function startCountdown(endTime) {
+  const startTime = new Date().getTime();
+  const countdownMinutes = 5; // Укажите длительность таймера в минутах
+  endTime = endTime * 1000;
+
+  const canvas = document.getElementById('timerCanvas');
+  const ctx = canvas.getContext('2d');
+  const timerText = document.getElementById('timerText');
+
+  // Настройки для Canvas
+  canvas.width = 75;
+  canvas.height = 75;
+  const radius = canvas.width / 2 - 10;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // Устанавливаем текст один раз
+  timerText.style.display = 'block';
+
+  function updateTimer() {
+    const now = new Date().getTime();
+    const remainingTime = Math.max(0, endTime - now);
+    const totalSeconds = Math.floor(remainingTime / 1000);
+
+    // Вычисляем прогресс таймера
+    const percent = remainingTime / (endTime - startTime);
+
+    // Обновляем текст таймера
+    timerText.innerHTML = `${totalSeconds.toString().padStart(2, '0')}`;
+
+    // Очищаем и рисуем круговой таймер
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(
+      centerX,
+      centerY,
+      radius,
+      -Math.PI / 2,
+      -Math.PI / 2 - 2 * Math.PI * percent,
+      true
+    );
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'blue';
+    ctx.stroke();
+
+    // Проверка на окончание таймера
+    if (remainingTime > 0) {
+      requestAnimationFrame(updateTimer);
+    } else {
+      timerText.style.display = 'none';
+    }
+  }
+
+  // Запускаем таймер
+  updateTimer();
+}
+
+
+---------------Код static\js\api\npc.js:
+export class NpcApi {
+    constructor() {}
+
+    async getNpc(query='') {
+        const response = await fetch(`/api/data/npc?name=${encodeURIComponent(query)}`);
+        return await response.json();
+    }
+}
+
+---------------Код static\js\init\api.js:
+export async function loadInitiativeData() {
+    fetch("/api/config/init")
+        .then(response => {
+            if (!response.ok) throw new Error(`Ошибка загрузки: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            this.currentRound = data.round || 0;
+            this.currentCharacterIndex = data.try || 0;
+            this.charactersData = data.all || [];
+            this.displayInfoBlocks();
+            this.displayCharacters();
+        })
+        .catch(error => console.error("Ошибка при загрузке данных:", error));
+}
+
+// Функция для отправки данных на сервер
+export  function  sendInit() {
+    const dataToSend = {
+        round: this.currentRound,
+        try: this.currentCharacterIndex,
+        all: this.charactersData,
+        rating: this.rating,
+        next: this.nextCharacterIndex
+    };
+    fetch("/api/config/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json;charset=UTF-8" },
+        body: JSON.stringify(dataToSend)
+    }).catch(error => console.error("Ошибка при отправке данных:", error));
+}
+export async function infoCharacter(name) {
+    // Поиск персонажа
+    const response = await fetch(`/api/data/monsters/html?name=${encodeURIComponent(name)}`);
+    const text = await response.text();
+
+    // Создание попапа
+    const popup = document.createElement('div');
+    popup.className = 'popup-overlay';
+
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="popup-text">${text}</div>
+            <button class="popup-close-btn">OK</button>
+        </div>
+    `;
+
+    // Добавляем попап на страницу
+    document.body.appendChild(popup);
+
+    // Закрытие попапа при клике на кнопку
+    popup.querySelector('.popup-close-btn').addEventListener('click', () => {
+        document.body.removeChild(popup);
+    });
+}
+
+
+---------------Код static\js\init\display.js:
+
+// Функция отображения информационных блоков
+export function displayInfoBlocks() {
+    document.getElementById('current-round').textContent = this.currentRound;
+    document.getElementById('battle-rating').textContent = this.rating;
+}
+
+// Обновление информации о текущем и следующем персонаже
+export function displayCurrentAndNextTurn(initData) {
+    const characters = initData.charactersData.sort((a, b) => parseFloat(b.init) - parseFloat(a.init));
+
+    const currentCharacter = characters.find(character => parseFloat(character.init) == initData.currentCharacterIndex);
+    const nextCharacter = characters.find(character => parseFloat(character.init) < initData.currentCharacterIndex) || characters[0];
+    initData.nextCharacterIndex = nextCharacter.init;
+    document.getElementById('current-round').textContent = initData.currentRound;
+    if (currentCharacter) document.getElementById('current-turn').textContent = currentCharacter.name;
+    if (nextCharacter) document.getElementById('next-turn').textContent = nextCharacter.name;
+}
+
+export function  fillEditForm(data) {
+        const form = document.getElementById('add-character-form');
+        form.style.display = 'grid'; // Показываем форму редактирования
+        document.getElementById('new-init').value = data.init || '';
+        document.getElementById('new-name').value = data.name || '';
+        document.getElementById('new-cd').value = data.armor_class || '10';
+        document.getElementById('new-hp-now').value = data.hit_points || '';
+        document.getElementById('new-hp-max').value = data.hit_points || '';
+        document.getElementById('new-npc').checked = 'true';
+        document.getElementById('new-experience').value = data.challenge_rating || '1';
+    }
+
+---------------Код static\js\init\func.js:
+export function calculateEncounterData(characters) {
+    const ENCOUNTER_EASY = 0,
+          ENCOUNTER_MEDIUM = 1,
+          ENCOUNTER_HARD = 2,
+          ENCOUNTER_DEADLY = 3;
+
+    const xpThresholdsByLevel = {
+        1: [25, 50, 75, 100],
+        2: [50, 100, 150, 200],
+        3: [75, 150, 225, 400],
+        4: [125, 250, 375, 500],
+        5: [250, 500, 750, 1100],
+        6: [300, 600, 900, 1400],
+        7: [350, 750, 1100, 1700],
+        8: [450, 900, 1400, 2100],
+        9: [550, 1100, 1600, 2400],
+        10: [600, 1200, 1900, 2800],
+        11: [800, 1600, 2400, 3600],
+        12: [1000, 2000, 3000, 4500],
+        13: [1100, 2200, 3400, 5100],
+        14: [1250, 2500, 3800, 5700],
+        15: [1400, 2800, 4300, 6400],
+        16: [1600, 3200, 4800, 7200],
+        17: [2000, 3900, 5900, 8800],
+        18: [2100, 4200, 6300, 9500],
+        19: [2400, 4900, 7300, 10900],
+        20: [2800, 5700, 8500, 12700]
+    };
+
+    const danger = {
+        "0": 10,
+        "1/8": 25, "1/4": 50, "1/2": 100,
+        "0.125": 25, "0.25": 50, "0.5": 100,
+        "1": 200, "2": 450, "3": 700, "4": 1100,
+        "5": 1800, "6": 2300, "7": 2900, "8": 3900, "9": 5000, "10": 5900, "11": 7200,
+        "12": 8400, "13": 10000, "14": 11500, "15": 13000, "16": 15000, "17": 18000,
+        "18": 20000, "19": 22000, "20": 25000, "21": 33000, "22": 41000, "23": 50000,
+        "24": 62000, "25": 75000, "26": 90000, "27": 105000, "28": 120000, "29": 135000,
+        "30": 155000
+    };
+
+    // Массив множителей на основе количества врагов
+    const factor = [1, 1.5, 2, 2.5, 3, 4];
+
+    let playerTotal = 0;
+    let masterTotal = 0;
+    let totalExp = 0;
+    let difficultyThresholds = [0, 0, 0, 0];
+    let encounterDifficulty = 0;
+
+    // 1. Рассчитываем пороги сложности для всей группы
+    characters.forEach(character => {
+        const isNpc = character.npc === "true";
+        const levelOrDanger = parseInt(character.exp);
+
+        if (isNpc) {
+            // Увеличиваем количество врагов и суммарный опыт врагов
+            masterTotal += 1;
+            totalExp += danger[levelOrDanger] || 0;
+        } else {
+            // Увеличиваем пороговые значения сложности отряда на основе уровня игрока
+            playerTotal += 1;
+            if (xpThresholdsByLevel[levelOrDanger]) {
+                difficultyThresholds[ENCOUNTER_EASY] += xpThresholdsByLevel[levelOrDanger][ENCOUNTER_EASY];
+                difficultyThresholds[ENCOUNTER_MEDIUM] += xpThresholdsByLevel[levelOrDanger][ENCOUNTER_MEDIUM];
+                difficultyThresholds[ENCOUNTER_HARD] += xpThresholdsByLevel[levelOrDanger][ENCOUNTER_HARD];
+                difficultyThresholds[ENCOUNTER_DEADLY] += xpThresholdsByLevel[levelOrDanger][ENCOUNTER_DEADLY];
+            }
+        }
+    });
+
+    // 2. Определение множителя сложности
+    let factorId;
+    if (masterTotal === 1) {
+        factorId = 1;
+    } else if (masterTotal === 2) {
+        factorId = 1.5;
+    } else if (masterTotal >= 3 && masterTotal <= 6) {
+        factorId = 2;
+    } else if (masterTotal >= 7 && masterTotal <= 10) {
+        factorId = 2.5;
+    } else if (masterTotal >= 11 && masterTotal <= 14) {
+        factorId = 3;
+    } else {
+        factorId = 4;
+    }
+
+    // Корректируем множитель для малых или больших групп
+    if (playerTotal < 3) {
+        factorId = Math.min(factorId + 1, 4); // применяем следующий множитель
+    } else if (playerTotal >= 6) {
+        factorId = Math.max(factorId - 1, 0.5); // предыдущий множитель
+    }
+
+    // 3. Рассчитываем итоговый опыт с учетом множителя
+    const adjustedExp = totalExp * factorId;
+
+    // 4. Определяем уровень сложности на основе суммарного опыта врагов
+    if (adjustedExp <= difficultyThresholds[ENCOUNTER_EASY]) {
+        encounterDifficulty = ENCOUNTER_EASY;
+    } else if (adjustedExp <= difficultyThresholds[ENCOUNTER_MEDIUM]) {
+        encounterDifficulty = ENCOUNTER_MEDIUM;
+    } else if (adjustedExp <= difficultyThresholds[ENCOUNTER_HARD]) {
+        encounterDifficulty = ENCOUNTER_HARD;
+    } else {
+        encounterDifficulty = ENCOUNTER_DEADLY;
+    }
+
+    // Возвращаем пороги сложности, итоговую сложность, суммарный опыт и примененный множитель
+    return {
+        difficultyThresholds,
+        encounterDifficulty,
+        adjustedExp,
+        factorId
+    };
+}
+
+
+export function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+export function createEditableSpan(content, property, index, callback, after='') {
+    // Разделяем текст на лейбл и значение
+    const [label, value] = content.split(': ');
+
+    // Создаем span для лейбла, который будет неизменным
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = `${label}: `;
+
+    // Создаем span для лейбла, который будет неизменным
+    const afterSpan = document.createElement('span');
+    afterSpan.textContent = after;
+
+    // Создаем span для значения, которое будет редактируемым
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = value;
+    valueSpan.classList.add('editable-value');
+    valueSpan.classList.add(property);
+    valueSpan.onclick = () => {
+        const newValue = window.prompt(`Введите новое значение для ${property}:`, valueSpan.textContent);
+        if (newValue !== null) {
+            valueSpan.textContent = newValue;
+            callback(index, property, newValue);
+        }
+    };
+
+    // Оборачиваем лейбл и значение в общий контейнер
+    const containerSpan = document.createElement('span');
+    containerSpan.append(labelSpan, valueSpan, afterSpan);
+
+    return containerSpan;
+}
+
+
+---------------Код static\js\locations\api.js:
+export async function loadMainLocations() {
+    try {
+        const response = await fetch(`${this.apiUrl}?type=main`);
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+            this.mainLocationSelect.innerHTML = '<option value="">Выберите основную локацию</option>';
+            data.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.ID;
+                option.selected = location.active===1
+                option.textContent = location.name;
+                this.mainLocationSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки основных локаций:', error);
+    }
+}
+
+export async function loadSubLocations() {
+    const mainLocationId = this.mainLocationSelect.value;
+    if (!mainLocationId) {
+        this.subLocationList.innerHTML = '<li>Пожалуйста, выберите основную локацию.</li>';
+        return;
+    }
+    try {
+        const response = await fetch(`${this.apiUrl}?parent_id=${mainLocationId}&active=true`);
+        const data = await response.json();
+        this.subLocationList.innerHTML = ''; // очищаем список
+        if (data && Array.isArray(data) && data.length > 0) {
+            data.forEach(location => {
+                const listItem = document.createElement('li');
+
+                // Первый span: название локации
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = location.name;
+                nameSpan.classList.add('location-span');
+                nameSpan.addEventListener('click', () => this.showEditPopup(location));
+
+                // Второй span: иконка крестика
+                const removeSpan = document.createElement('span');
+                removeSpan.classList.add('location-remove');
+                removeSpan.textContent = '✖'; // можно заменить на любую иконку
+
+                removeSpan.addEventListener('click', () => this.removeLocation(location.ID));
+
+                // Добавляем оба span в li
+                listItem.appendChild(nameSpan);
+                listItem.appendChild(removeSpan);
+
+                // Добавляем ID локации в dataset li
+                listItem.dataset.locationId = location.ID;
+
+                // Добавляем li в список
+                this.subLocationList.appendChild(listItem);
+            });
+        } else {
+            this.subLocationList.innerHTML = '<li>Нет активных подлокаций для выбранной основной локации.</li>';
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки подлокаций:', error);
+    }
+}
+
+---------------Код static\js\locations\helpers.js:
+
+
+---------------Код static\js\script\api.js:
+
+// Функция для получения начальной конфигурации
+import {setAudio, updateInfoBar} from "./helpers.js";
+
+export async function getInit() {
+  const response = await fetch('/api/config');
+  if (response.ok) {
+    return response.json();
+  } else {
+    console.error("Error fetching initial config");
+    return null;
+  }
+}
+
+// Функция для получения конфигурации карты по имени
+export async function getConfig(mapName) {
+  const response = await fetch(`/api/configs/${mapName}`);
+  if (response.ok) {
+    return response.json();
+  } else {
+    console.error(`Error fetching map config for ${mapName}`);
+    return null;
+  }
+}
+
+  export function sendPolygonsData() {
+    if (!this.admin_mode) return;
+
+    const polygonsData = this.polygons.map(polygon => ({
+      points: polygon.points,
+      isVisible: polygon.layer.isVisible,
+    }));
+
+    const center = this.map.getCenter();
+    const zoomLevel = this.map.getZoom();
+
+    fetch('/api/polygons', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        mapName: this.mapName,
+        polygons: polygonsData,
+        mainPolygon: this.mainPolygon ? { points: this.mainPolygon.getLatLngs() } : null,
+        mapState: {
+          center: { lat: center.lat, lng: center.lng },
+          zoom: zoomLevel,
+        },
+      }),
+    })
+      .then(response => response.json())
+      .then(data => console.log("Data sent successfully:", data))
+      .catch(error => console.error("Error sending polygons data:", error));
+  }
+
+  export async function checkForConfigUpdates() {
+    const config = await getConfig(this.mapName);
+
+
+    if (config && config.lastUpdated !== this.lastUpdated) {
+      this.lastUpdated = config.lastUpdated;
+      this.createPolygons(config);
+      setAudio(config);
+      startCountdown(config.timer);
+      updateSkullColor(config.init.rating);
+      updateInfoBar(config);
+      this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
+      console.log("Map data updated due to configuration change.");
+    }
+  }
+
+---------------Код static\js\script\helpers.js:
+// Функция для создания кастомного маркера
+export function createNumberedIcon(number) {
+  return L.divIcon({
+    className: 'numbered-icon',
+    iconSize: [10, 10],
+    html: `<div style="display: flex; align-items: center;">
+             <div style="min-width: 6px; height: 6px; background-color: red; border-radius: 50%;"></div>
+             <span style="color:red; margin-left: 5px; font-size: 10px;">${number}</span>
+           </div>`
+  });
+}
+
+export function setAudio(config) {
+  const audio = document.getElementById('audio');
+  let src = '/static/audio/'+config.ambience+'.mp3';
+  if (audio.src.indexOf(src)==-1) {
+    audio.src = src;
+    audio.play();
+  }
+}
+
+// Функция для расчёта цвета по здоровью
+export function getHealthColor(hpNow, hpMax) {
+    const ratio = hpNow / hpMax;
+
+    if (ratio > 1 ) {
+        // Переход от зеленого к синему
+        const blueRatio = (ratio - 1) * 2; // Нормализуем в диапазон [0, 1]
+        const g = Math.round(255 * (1 - blueRatio));
+        const b = Math.round(255 * blueRatio);
+        return `rgb(0, ${g}, ${b})`;
+    } else if (ratio >= 0.5) {
+        // Переход от желтого к зеленому
+        const greenRatio = (ratio - 0.5) * 2; // Нормализуем в диапазон [0, 1]
+        const r = Math.round(255 * (1 - greenRatio));
+        const g = 255;
+        return `rgb(${r}, ${g}, 0)`;
+    } else if (ratio > 0) {
+        // Переход от красного к желтому
+        const redRatio = ratio * 2; // Нормализуем в диапазон [0, 1]
+        const r = 255;
+        const g = Math.round(255 * redRatio);
+        return `rgb(${r}, ${g}, 0)`;
+    } else {
+        // Если ratio <= 0, полностью красный
+        return `rgb(255, 0, 0)`;
+    }
+}
+
+// Генерация HTML для участника
+export function getParticipantHTML(participant) {
+    const { name, hp_now, hp_max } = participant;
+    const color = getHealthColor(hp_now, hp_max);
+    return `<span style="color: ${color};">${name}</span>`;
+}
+
+export function setDrawButtonHandler() {
+    const drawButton = document.getElementById('draw-button');
+    if (!drawButton) return;
+    drawButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.drawingMode = !this.drawingMode;
+        drawButton.textContent = this.drawingMode ? "Finish Drawing" : "Draw Polygon";
+        if (this.drawingMode) {
+            this.setPolygonsOpacity(0.6);
+            this.setPolygonClickability(false);
+        } else {
+            this.setPolygonsOpacity(1.0);
+            this.setPolygonClickability(true);
+            if (this.polygonPoints.length > 2) {
+                this.createNewPolygon();
+                this.sendPolygonsData();
+            }
+        }
+    });
+}
+
+ export function updateInfoBar(data) {
+        const infoBar = document.getElementById('info-bar');
+        if (!infoBar) return;
+        const round = data.init.round;
+        const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
+        const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
+        const participants = data.init.all;
+
+        // Сортируем участников по инициативе
+        const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
+
+        // Находим текущий и следующий ход
+        const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
+        const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
+        const current = sortedParticipants[currentIndex] || null;
+        const next = sortedParticipants[nextIndex] || null;
+
+
+        // Обновляем информационную строку
+        infoBar.innerHTML = `
+      Раунд: <span>${round}</span>,
+      Ход: ${current ? getParticipantHTML(current) : '---'},
+      Следующий: ${next ? getParticipantHTML(next) : '---'}
+    `;
+    }
+
+---------------Код static\js\script\makrer.js:
+export function initializeMarkers(){
+    let config = this.config;
+    let map = this.map;
+}
+
+export class SlideMenu {
+    constructor(mapManager) {
+        this.mapManager = mapManager;
+        this.markers = [];
+    }
+    toggle() {
+        const sidebar = document.createElement('div');
+        sidebar.style.right = sidebar.style.right === '0px' ? '-33%' : '0px';
+    }
+
+    initializeMapMarkers(map) {
+
+    }
+
+    startAdding(type) {
+        this.toggle();
+        window.mapManager.map.once('click', e => {
+            const marker = L.marker(e.latlng, { draggable: type === 'draggable' }).addTo(window.mapManager.map);
+            marker.bindPopup(`
+           ${type} marker
+           <button onclick="window.SlideMenu.removeMarker(${this.markers.length})">Remove</button>
+         `);
+            this.markers.push(marker);
+        });
+    }
+    removeMarker(index) {
+        const marker = this.markers[index];
+        if (marker) {
+            window.mapManager.map.removeLayer(marker);
+            this.markers.splice(index, 1);
+        }
+    }
+}
+
+window.SlideMenu =  new SlideMenu();
+
+---------------Код static\js\script\poligons.js:
+
+export function  createPolygons(config) {
+    this.polygons.forEach(polygon => this.map.removeLayer(polygon.layer));
+    this.polygons = [];
+    config.polygons.forEach(polygonData => {
+        const polygonLayer = L.polygon(polygonData.points, {
+            color: 'black',
+            fillColor: 'black',
+            fillOpacity: polygonData.isVisible ? 1.0 : 0.0,
+            opacity: polygonData.isVisible ? 1.0 : 0.0,
+            weight: 1,
+        }).addTo(this.map);
+        polygonLayer.isVisible = polygonData.isVisible;
+        polygonLayer.clickHandler = this.createPolygonClickHandler(polygonLayer);
+        polygonLayer.on('click', polygonLayer.clickHandler);
+        this.polygons.push({
+            layer: polygonLayer,
+            points: polygonData.points,
+            isVisible: polygonLayer.isVisible,
+        });
+    });
+    if (config.mainPolygon) {
+        if (this.mainPolygon) this.map.removeLayer(this.mainPolygon);
+        this.mainPolygon = L.polygon(config.mainPolygon.points, {
+            color: 'black',
+            fillColor: 'black',
+            fillOpacity: 1.0,
+            weight: 3,
+        }).addTo(this.map);
+    }
+}
+
+export function toggleMainPolygonVisibility() {
+    if (this.map.hasLayer(this.mainPolygon)) {
+        this.map.removeLayer(this.mainPolygon);
+    } else {
+        this.mainPolygon.addTo(this.map);
+    }
+}
+export function createMainPolygon(config) {
+    const bounds = this.map.getBounds();
+    const polygonPoints = [
+        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+        [bounds.getSouthWest().lat, bounds.getNorthEast().lng],
+        [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+        [bounds.getNorthEast().lat, bounds.getSouthWest().lng],
+    ];
+    let holes = [];
+    config.polygons.forEach(polygonData => {
+        holes.push(polygonData.points);
+    });
+    this.mainPolygon = L.polygon([polygonPoints, holes], {
+        color: 'black',
+        fillColor: 'black',
+        fillOpacity: 1,
+        weight: 3,
+    }).addTo(this.map);
+}
+
+export function updateMainPolygon(config) {
+    let holes = [];
+    config.polygons.forEach(polygonData => {
+        holes.push(polygonData.points);
+    });
+    this.mainPolygon.setLatLngs([this.mainPolygon.getLatLngs()[0], holes]);
+}
+
+export function setPolygonClickability(clickable) {
+    this.polygons.forEach(polygon => {
+        if (clickable) {
+            polygon.layer.on('click', polygon.layer.clickHandler);
+        } else {
+            polygon.layer.off('click', polygon.layer.clickHandler);
+        }
+    });
+}
+
+
+
+---------------Код static\js\test\empty.js:
+import {exit, sleep} from './func.js'
+import {showTab} from '../tabs.js'
+
+export async function empty(sleeper) {
+
+    //Тест
+    console.log("=== Добавление NPC в локацию ===");
+    await sleep(sleeper);
+    await (async () => {
+        if(1){
+            console.log("✓ Тест пройден");
+        } else {
+            exit("✗ Ошибка тестирования");
+        }
+    })();
+
+
+}
+
+
+
+
+---------------Код static\js\test\func.js:
+export function exit(text){
+    console.error(text);
+    die();
+}
+
+export function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+---------------Код static\js\test\init.js:
+import {exit, sleep} from './func.js'
+import {showTab} from '../tabs.js'
+
+export async function init(sleeper) {
+    let manager = initiativeManager;
+
+
+    showTab('initiative-tab')
+    await sleep(sleeper);
+    //проверка, что данные загружаются
+    console.log("=== Загрузка данных ===");
+    await (async () => {
+        await manager.loadInitiativeData()
+        if(manager.charactersData.length){
+            console.log("✓ Загрузка данных прошла успешно");
+        } else {
+            exit("✗ Ошибка при загрузке данных");
+        }
+    })();
+
+    console.log("=== Клик вперед ===");
+    await sleep(sleeper);
+    await (async () => {
+        const oldData = (manager)=>{
+            return {currentCharacterIndex,nextCharacterIndex } = manager
+        }
+        document.querySelector('.toggle-form-button.next').click();
+        await sleep(sleeper);
+        const newData = (manager)=>{
+            return {currentCharacterIndex,nextCharacterIndex } = manager
+        }
+        if (oldData.currentCharacterIndex !== newData.currentCharacterIndex || oldData.nextCharacterIndex === newData.currentCharacterIndex) {
+            console.log("✓ Кнопка Next работает");
+        } else {
+            exit("✗ Кнопка Next не работает",newData,oldData);
+        }
+    })();
+
+
+    console.log("=== Клик назад ===");
+    await sleep(sleeper);
+     await (async () => {
+         const oldIndex = manager.currentCharacterIndex;
+         document.querySelector('.toggle-form-button.prev').click();
+         await sleep(sleeper);
+         const newIndex = manager.currentCharacterIndex;
+         if (oldIndex !== newIndex) {
+             console.log("✓ Кнопка Prev работает");
+         } else {
+             exit("✗ Кнопка Prev не работает");
+         }
+     })();
+
+     console.log("=== добавление персонажа ===");
+     await sleep(sleeper);
+     await (async () => {
+         let count = initiativeManager.charactersData.length;
+         const addCharacter = document.querySelector(".toggle-form-button.add");
+         addCharacter.click();
+
+         document.getElementById('new-init').value = '30';//с самой большой инициативой чтобы был в самом верху
+         document.getElementById('new-name').value = 'Персонаж для Теста';
+         document.getElementById('new-cd').value = '15';
+         document.getElementById('new-hp-now').value = 20;
+         document.getElementById('new-hp-max').value = 30;
+         document.getElementById('new-surprise').checked = true;
+         document.getElementById('new-npc').checked = true;
+         document.getElementById('new-experience').value = '20';
+
+         const saveCharacter = document.getElementById("add-character-button");
+         saveCharacter.click();
+         await sleep(sleeper);
+         const count2 = initiativeManager.charactersData.length;
+         if (count !== count2) {
+             console.log("✓ Кнопка Добавить персонажа работает");
+         } else {
+             exit("✗ Кнопка Добавить персонажа не работает");
+         }
+
+     })();
+
+
+    console.log("=== изменение данных пользователя (здоровье) ===");
+    await sleep(sleeper);
+     await (async () => {
+         let tempPrompt = window.prompt;
+         let newName = "1";
+         window.prompt = () => newName;
+
+         const firstCharacterNameSpan = document.querySelector('.editable-value.hp_now');
+         firstCharacterNameSpan.click();
+         await sleep(sleeper);
+
+         if (manager.charactersData[0].hp_now === newName) {
+             console.log("✓ Изменение данных персонажа работает");
+         } else {
+             exit("✗ Изменение данных персонажа не работает");
+         }
+
+         window.prompt = tempPrompt; // Восстановление оригинальной функции
+     })();
+
+     console.log("=== определение текущего персонажа ===");
+     await sleep(sleeper);
+     await (async () => {
+         const current = manager.charactersData.find(c => c.init.toString() === manager.currentCharacterIndex);
+         if (current) {
+             console.log("✓ Текущий персонаж корректно определен");
+         } else {
+             exit("✗ Ошибка в определении текущего персонажа");
+         }
+     })();
+
+     console.log("=== Проверка восстановления здоровья ===");
+     await sleep(sleeper);
+     await (async () => {
+         const testCharacter = manager.charactersData[0];
+         testCharacter.hp_now = 1; // Умышленно уменьшаем здоровье
+         manager.healCharacter(0);
+         await sleep(sleeper);
+
+         if (testCharacter.hp_now === testCharacter.hp_max) {
+             console.log("✓ Восстановление здоровья работает");
+         } else {
+             exit("✗ Восстановление здоровья не работает");
+         }
+
+
+         console.log("=== Проверка удаления персонажа ===");
+         await sleep(sleeper);
+         const initialLength = manager.charactersData.length;
+         manager.deleteCharacter(0);
+         await sleep(sleeper);
+
+         if (manager.charactersData.length === initialLength - 1) {
+             console.log("✓ Удаление персонажа работает");
+         } else {
+             exit("✗ Удаление персонажа не работает");
+         }
+     })();
+     await sleep(sleeper);
+
+     console.log("=== Поиск монстра и подстановка данных в форму ===");
+     await (async () => {
+         // Шаг 1: Получаем ссылку на строку поиска
+         const npcInput = document.getElementById('npc-input');
+         const npcList = document.getElementById('npc-list');
+         // Шаг 2: Вводим имя монстра в строку поиска
+         npcInput.value = "Гоблин";
+         npcInput.dispatchEvent(new Event('input'));
+         // Ожидаем обновления списка монстров после поиска
+         await sleep(300 + sleeper);
+         // Проверяем, что список монстров обновился и содержит результаты
+         if (npcList.innerHTML.trim().length > 0) {
+             console.log("✓ Список монстров обновился");
+             // Шаг 3: Клик по первому найденному монстру
+             const firstNpc = npcList.querySelector('li');
+             if (firstNpc) {
+                 firstNpc.click();
+                 await sleep(sleeper);
+                 // Шаг 4: Проверка, что данные монстра подставились в форму
+                 const nameInput = document.getElementById('new-name');
+                 const cdInput = document.getElementById('new-cd');
+                 const hpNowInput = document.getElementById('new-hp-now');
+                 const hpMaxInput = document.getElementById('new-hp-max');
+                 const expInput = document.getElementById('new-experience');
+                 const newInit = document.getElementById('new-init');
+                 if (nameInput.value) {
+                     console.log("✓ Данные монстра подставились в форму корректно");
+
+                     newInit.value = 40;
+                     document.getElementById('add-character-button').click();
+                     await sleep(sleeper);
+                     const firstNpcInfo = document.querySelector('.character-row.character-npc .js-info');
+                     firstNpcInfo.click();
+                     await sleep(sleeper);
+                     if (document.querySelector('.popup-overlay') && document.querySelector('.card__article-body')) {
+                          console.log("✓ Попап отобразился");
+
+                          await sleep(sleeper);
+                          const closeButton = document.querySelector('.popup-close-btn');
+                          closeButton.click();
+                          await sleep(sleeper);
+                          if (!document.querySelector('.popup-overlay')){
+                              console.log("✓ Попап Закрылся");
+                              manager.deleteCharacter(0);
+                              await sleep(sleeper);
+                          } else {
+                              exit("✗ Попап не закрылся");
+                          }
+                     } else {
+                          exit("✗ Попап не отобразился");
+                     }
+                 } else {
+                     exit("✗ Данные монстра не подставились в форму");
+                 }
+             } else {
+                 exit("✗ Не удалось найти монстра в списке");
+             }
+         } else {
+             exit("✗ Список монстров пустой или не обновился");
+         }
+     })();
+
+     await sleep(sleeper);
+}
+
+
+window.test = init;
+
+---------------Код static\js\test\location.js:
+import { exit, sleep } from './func.js';
+import {showTab} from '../tabs.js'
+
+export async function location(sleeper) {
+    const manager = window.LocationManager;
+
+    showTab('monster-tab')
+    await sleep(sleeper);
+    // Проверка загрузки основных локаций
+    console.log("=== Загрузка основных локаций ===");
+    await (async () => {
+        await manager.loadMainLocations();
+        if (manager.mainLocationSelect.options.length > 0) {
+            console.log("✓ Основные локации успешно загружены");
+        } else {
+            exit("✗ Ошибка при загрузке основных локаций");
+        }
+    })();
+
+    // Проверка загрузки подлокаций
+    console.log("=== Загрузка подлокаций ===");
+    await sleep(sleeper);
+    await (async () => {
+        const mainLocationId = manager.mainLocationSelect.value;
+        await manager.loadSubLocations();
+        if (manager.subLocationList.children.length > 0) {
+            console.log("✓ Подлокации успешно загружены");
+        } else {
+            exit("✗ Ошибка при загрузке подлокаций для основной локации " + mainLocationId);
+        }
+    })();
+
+    // Проверка добавления новой локации
+    console.log("=== Добавление новой локации ===");
+    await sleep(sleeper);
+    await (async () => {
+        const initialCount = manager.subLocationList.children.length;
+        manager.addLocationBtn.click();
+        await sleep(sleeper);
+        manager.locationNameInput.value = "Тестовая Локация";
+        manager.saveLocationBtn.click();
+        await sleep(sleeper);
+        const newCount = manager.subLocationList.children.length;
+        if (newCount > initialCount) {
+            console.log("✓ Локация успешно добавлена");
+        } else {
+            exit("✗ Локация не добавлена");
+        }
+    })();
+
+
+    //Открыть тестовую локацию
+    console.log("=== Открытие тестовой локации ===");
+    await sleep(sleeper);
+    await (async () => {
+        const locationToOpen = manager.subLocationList.lastElementChild;
+        await manager.showEditPopup({
+            'ID':locationToOpen.dataset.locationId,
+            'name':locationToOpen.querySelector('.location-span').innerText,
+        });
+        await sleep(sleeper);
+
+        if (manager.editPopup.style.display === 'block') {
+            console.log("✓ Локация успешно открыта");
+        } else {
+            exit("✗ Ошибка при открытии локации");
+        }
+    })();
+
+    //Открыть тестовую локацию
+    console.log("=== Проверка редактирования локации ===");
+    await sleep(sleeper);
+    await (async () => {
+        let locationToOpen = manager.subLocationList.lastElementChild;
+        const testText = 'Отредактированная локация'
+        manager.editNameInput.value = testText;
+        await manager.editLocationName();
+        await sleep(sleeper);
+        locationToOpen = manager.subLocationList.lastElementChild;
+        if (locationToOpen.querySelector('.location-span').innerText===testText) {
+            console.log("✓ Локация успешно отредактирована");
+        } else {
+            exit("✗ Ошибка при Редактировании локации");
+        }
+    })();
+
+
+    // Проверка поиска NPC
+    console.log("=== Поиск NPC ===");
+    await sleep(sleeper);
+    await (async () => {
+        manager.searchNpcInput.value = "Гоблин"; // Имя NPC, который точно есть в базе
+        manager.searchNpcInput.dispatchEvent(new Event('input'));
+        await sleep(300 + sleeper);
+        if (manager.searchNpcResults.children.length > 0) {
+            console.log("✓ Поиск NPC работает");
+        } else {
+            exit("✗ Ошибка при поиске NPC");
+        }
+    })();
+
+    // Проверка добавления NPC в локацию
+    console.log("=== Добавление NPC в локацию ===");
+    await sleep(sleeper);
+    await (async () => {
+        const initialNpcCount = manager.editNpcList.children.length;
+        const firstNpcResult = manager.searchNpcResults.firstElementChild;
+        if (firstNpcResult) {
+            firstNpcResult.click();
+            await sleep(sleeper);
+            const newNpcCount = manager.editNpcList.children.length;
+            if (newNpcCount > initialNpcCount) {
+                console.log("✓ NPC успешно добавлен в локацию");
+            } else {
+                exit("✗ Ошибка при добавлении NPC в локацию");
+            }
+        } else {
+            exit("✗ Нет доступных NPC для добавления");
+        }
+    })();
+
+    // Проверка удаления NPC из локации
+    console.log("=== Удаление NPC из локации ===");
+    await sleep(sleeper);
+    await (async () => {
+        const initialNpcCount = manager.editNpcList.children.length;
+        const firstNpcInList = manager.editNpcList.querySelector('.location-del-npc');
+        if (firstNpcInList) {
+            firstNpcInList.click();
+            await sleep(sleeper);
+            const newNpcCount = manager.editNpcList.children.length;
+            if (newNpcCount < initialNpcCount) {
+                console.log("✓ NPC успешно удален из локации");
+            } else {
+                exit("✗ Ошибка при удалении NPC из локации");
+            }
+        } else {
+            exit("✗ Нет NPC для удаления");
+        }
+    })();
+
+    console.log("=== Закрытие попапа редактирования ===");
+    await sleep(sleeper);
+    await (async () => {
+        manager.showEditPopup({ ID: 1, name: "Тестовая Локация" });
+        await sleep(sleeper);
+        manager.closePopup.click();
+        if (manager.editPopup.style.display === 'none') {
+            console.log("✓ Попап успешно закрыт");
+        } else {
+            exit("✗ Попап не закрылся");
+        }
+    })();
+
+        // Проверка удаления локации
+    console.log("=== Удаление локации ===");
+    await sleep(sleeper);
+    await (async () => {
+        const initialCount = manager.subLocationList.children.length;
+        const locationToDelete = manager.subLocationList.lastElementChild.dataset.locationId;
+        await manager.removeLocation(locationToDelete);
+        await sleep(sleeper);
+        const newCount = manager.subLocationList.children.length;
+        if (newCount < initialCount) {
+            console.log("✓ Локация успешно удалена");
+        } else {
+            exit("✗ Ошибка при удалении локации");
+        }
+    })();
+}
+
+---------------Код static\js\test\map.js:
+import {exit, sleep} from './func.js'
+import {showTab} from '../tabs.js'
+
+export async function map(sleeper) {
+
+    //Тест
+    console.log("=== Добавление NPC в локацию ===");
+    await sleep(sleeper);
+    await (async () => {
+        if(1){
+            console.log("✓ Тест пройден");
+        } else {
+            exit("✗ Ошибка тестирования");
+        }
+    })();
+
+
+}
+
+---------------Код static\js\test\npc.js:
+import {exit, sleep} from './func.js'
+import {showTab} from '../tabs.js'
+
+export async function npc(sleeper) {
+    const manager = window.NpcManager;
+    //Тест
+    console.log("=== Поиск шаблона NPC ===");
+    await sleep(sleeper);
+    await (async () => {
+        manager.searchNpcInput.value = "Гоблин"
+        manager.searchNpcInput.dispatchEvent(new Event('input'));
+        await sleep(sleeper + 300);
+        const firstNpcResult = manager.searchNpcResults.firstElementChild;
+        firstNpcResult.click()
+        await sleep(sleeper);
+        if(manager.npcCd.value && manager.npcName.value){
+            console.log("✓ Поиск НПС отработал");
+        } else {
+            exit("✗ Поиск НПС не отработал");
+        }
+    })();
+
+    await sleep(sleeper);
+    await (async () => {
+        let count = document.querySelectorAll(".npc-item").length;
+        manager.addNpcButton.click()
+        await sleep(sleeper);
+
+        if (count <  document.querySelectorAll(".npc-item").length){
+            console.log("✓ НПС добавлен");
+        } else {
+            exit("✗ НПС не добавлен");
+        }
+    })();
+
+    await sleep(sleeper);
+    await (async () => {
+        let info = document.querySelector(".npc-item:last-child .js-edit-npc");
+        info.click()
+        await sleep(sleeper);
+        //проверить что форма изменилась.
+        if (manager.npcName.value !== ''){
+            console.log("✓ информация об НПС добавлена в форму");
+        } else {
+            exit("✗ информация об НПС не добавлена в форму");
+        }
+        // отредактировать форму
+        let testName = 'Тестовый персонаж. Удалить';
+        manager.npcName.value = testName;
+        manager.updateNpcButton.click();
+        await sleep(sleeper);
+
+        // проверить что изменения применились
+        let name = document.querySelector(".npc-item:last-child .js-npc-name").innerText;
+        if (name === testName){
+            console.log("✓ НПС Отредактирован");
+        } else {
+            exit("✗ НПС не отредактирован");
+        }
+    })();
+
+    //Удаление НПС
+    await sleep(sleeper);
+    await (async () => {
+        const count = document.querySelectorAll(".npc-item").length;
+        let del = document.querySelector(".npc-item:last-child .delete-btn");
+        del.click()
+        await sleep(sleeper);
+        //проверить что форма изменилась.
+        if (count > document.querySelectorAll(".npc-item").length){
+            console.log("✓ НПС Удален");
+        } else {
+            exit("✗ ошибка удаления НПС");
+        }
+    })();
+
+}
+
+
+---------------Код static\js\test\tab.js:
+import {exit, sleep} from './func.js'
+export async function tab(sleeper) {
+
+    //Тест
+    await sleep(sleeper);
+    await (async () => {
+        let isTabActive = location.hash.replace('#','')==document.querySelector('.tab-content.active')?.id;
+        if(isTabActive){
+            console.log("✓ id таба совпадает с хэшем");
+        } else {
+            exit("✗ id таба не совпадает с хэшем");
+        }
+    })();
+
+}
 
----------------Код routes\data.py:
-from flask import Blueprint, render_template, Flask, request, jsonify
-import os
-from flask import request, render_template, send_file
-from bs4 import BeautifulSoup  # Убедитесь, что библиотека установлена
-import sqlite3
-
-from units.database import get_main_location
-
-app = Flask(__name__)
-
-DATABASE = "data/data.db"
-
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-data_bp = Blueprint('data', __name__)
-
-@data_bp.route('/data/monsters/json', methods=['GET'])
-def get_monsters():
-    name_query = request.args.get('name', '').strip()
-    if not name_query:
-        return jsonify([])
-
-    variants = [name_query.lower(), name_query.capitalize(), name_query.upper()]
-    query = f"""
-        SELECT * FROM monsters
-        WHERE {" OR ".join(["name LIKE ?"] * len(variants))} LIMIT 10
-    """
-    with get_db_connection() as conn:
-        results = conn.execute(query, tuple(f"%{v}%" for v in variants)).fetchall()
-
-    return jsonify([dict(row) for row in results])
-
-@data_bp.route('/data/monsters/html', methods=['GET'])
-def get_monsters_html():
-    html_dir = './utils/dndsu'
-    name_query = request.args.get('name', '').strip()
-    if not name_query:
-        return "Имя монстра не указано", 400  # Возвращаем ошибку если имя не задано
-
-    query = """
-        SELECT * FROM monsters
-        WHERE name LIKE ? LIMIT 10
-    """
-    with get_db_connection() as conn:
-        results = conn.execute(query, (f"%{name_query}%",)).fetchall()
-
-    if not results:
-        return "Монстры не найдены", 404
-
-    monsters = [dict(row) for row in results]
-
-    # Работаем с первым результатом (или можно сделать цикл для всех)
-    for monster in monsters:
-        url = monster.get('url')
-        if not url or monster.get('name')!=name_query:
-            continue  # Пропускаем, если URL отсутствует
-
-        # Преобразуем URL в имя файла
-        try:
-            filename = url.split('/')[-2]  # Извлекаем последнюю часть URL
-            html_filename = f"bestiary_{filename}.html"
-            html_filepath = os.path.join(html_dir, html_filename)
-
-            # Проверяем, существует ли файл
-            if os.path.exists(html_filepath):
-                # Открываем файл и ищем нужный блок
-                with open(html_filepath, 'r', encoding='utf-8') as html_file:
-                    soup = BeautifulSoup(html_file, 'html.parser')
-                    block = soup.select_one('.card__category-bestiary:not(.card__group-multiverse)')
-                    if block:
-                        return block.decode_contents(), 200
-        except Exception as e:
-            return f"Ошибка обработки файла: {e}", 500
-
-    return "HTML-файл не найден или блок отсутствует " + html_filepath, 404
-
-
-
-@data_bp.route('/data/location', methods=['GET'])
-def get_locations():
-    parent_id = request.args.get('parent_id', type=int)
-    type_filter = request.args.get('type', '')
-    active = request.args.get('active', type=bool, default=True)
-
-    query = "SELECT * FROM locations WHERE 1=1"
-    params = []
-
-    if type_filter:
-        query += " AND type = ?"
-        params.append(type_filter)
-
-    if parent_id:
-        query += " AND parent_id = ?"
-        params.append(parent_id)
-
-    if active is not None:
-        query += " AND active = ?"
-        params.append(active)
-
-    with get_db_connection() as conn:
-        results = conn.execute(query, tuple(params)).fetchall()
-
-    return jsonify([dict(row) for row in results])
-
-@data_bp.route('/data/location', methods=['POST'])
-def add_location():
-    data = request.get_json()
-    name = data.get('name', '').strip()
-    if not name:
-        return jsonify({"error": "Название локации обязательно"}), 400
-
-    with get_db_connection() as conn:
-        main_location = get_main_location()
-
-        if not main_location:
-            return jsonify({"error": "Нет активной основной локации"}), 400
-
-        parent_id = main_location['id']
-        conn.execute("""
-            INSERT INTO locations (name, type, parent_id, active)
-            VALUES (?, 'second', ?, 1)
-        """, (name, parent_id))
-        conn.commit()
-
-    return jsonify({"message": "Локация успешно добавлена"}), 201
-
-@data_bp.route('/data/location/remove', methods=['POST'])
-def remove_location():
-    data = request.get_json()
-    location = data.get('location')
-    if not location:
-        return jsonify({"error": "id локации обязательно"}), 400
-
-    with get_db_connection() as conn:
-        result = conn.execute("""
-            SELECT id FROM locations WHERE id = ?
-        """, (location,)).fetchone()
-
-        if not result:
-            return jsonify({"error": "Локация не найдена"}), 404
-
-        conn.execute("DELETE FROM locations WHERE id = ?", (location,))
-        conn.execute("DELETE FROM location_npc WHERE location_id = ?", (location,))
-        conn.commit()
-
-    return jsonify({"message": "Локация успешно удалена"}), 200
-@data_bp.route('/data/location/update', methods=['POST'])
-def update_location():
-    data = request.get_json()
-    location = data.get('location')
-    name = data.get('name')
-
-    if not location:
-        return jsonify({"error": "id локации обязательно"}), 400
-    if not name:
-        return jsonify({"error": "Имя локации обязательно"}), 400
-
-    with get_db_connection() as conn:
-        result = conn.execute("""
-            SELECT id FROM locations WHERE id = ?
-        """, (location,)).fetchone()
-
-        if not result:
-            return jsonify({"error": "Локация не найдена"}), 404
-
-        conn.execute("UPDATE locations SET name = ? WHERE id = ?", (name, location,))
-        conn.commit()
-
-    return jsonify({"message": "Локация успешно обновлена"}), 200
-
-@data_bp.route('/data/locations/npc/', methods=['GET'])
-def get_location_npc():
-    location_id = request.args.get('location_id', type=int)
-    if not location_id:
-        return jsonify({"error": "location_id обязателен"}), 400
-
-    with get_db_connection() as conn:
-        npc_ids = [row['npc_id'] for row in conn.execute("""
-            SELECT npc_id FROM location_npc WHERE location_id = ?
-        """, (location_id,))]
-
-        if not npc_ids:
-            return jsonify([])
-
-        query = f"SELECT * FROM monsters WHERE id IN ({','.join(['?'] * len(npc_ids))})"
-        monsters = conn.execute(query, tuple(npc_ids)).fetchall()
-
-    return jsonify([dict(row) for row in monsters])
-
-@data_bp.route('/data/locations/npc/add', methods=['POST'])
-def add_location_npc():
-    data = request.get_json()
-    location_id = data.get('location_id')
-    npc_id = data.get('monster_id')
-
-    if not location_id or not npc_id:
-        return jsonify({"error": "location_id и npc_id обязательны"}), 400
-
-    with get_db_connection() as conn:
-        if conn.execute("""
-            SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
-        """, (location_id, npc_id)).fetchone():
-            return jsonify({"message": "Такая связь уже существует"}), 200
-
-        conn.execute("""
-            INSERT INTO location_npc (location_id, npc_id)
-            VALUES (?, ?)
-        """, (location_id, npc_id))
-        conn.commit()
-
-    return jsonify({"message": "Связь успешно добавлена"}), 201
-
-@data_bp.route('/data/locations/npc/remove', methods=['POST'])
-def remove_location_npc():
-    data = request.get_json()
-    location_id = data.get('location_id')
-    npc_id = data.get('monster_id')
-
-    if not location_id or not npc_id:
-        return jsonify({"error": "location_id и npc_id обязательны"}), 400
-
-    with get_db_connection() as conn:
-        if not conn.execute("""
-            SELECT 1 FROM location_npc WHERE location_id = ? AND npc_id = ?
-        """, (location_id, npc_id)).fetchone():
-            return jsonify({"error": "Данного монстра в этой локации нет"}), 200
-
-        conn.execute("DELETE FROM location_npc WHERE npc_id = ?", (npc_id,))
-        conn.commit()
-
-    return jsonify({"message": "Связь успешно удалена"}), 200
-
-
-@data_bp.route('/data/npc/add', methods=['POST'])
-def add_custom_npc():
-    data = request.form
-    cd = data.get('cd')
-    name = data.get('name')
-    health = data.get('health')
-    template = data.get('template')
-    text = data.get('text')
-
-    if not template:
-        return jsonify({"error": "template обязательны"}), 400
-
-    with get_db_connection() as conn:
-        conn.execute("""
-            INSERT INTO npc (name, cd, hp, text, template)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, cd, health, text, template, ))
-        conn.commit()
-
-    return jsonify({"message": "Персонаж успешно добавлен"}), 200
-
-
-@data_bp.route('/data/npc', methods=['GET'])
-def get_custom_npc():
-    name = request.args.get('name', type=str)  # Если это строка, используем type=str
-
-    with get_db_connection() as conn:
-        if name:
-            # Используем параметризованный запрос для защиты от SQL-инъекций
-            query = "SELECT * FROM npc WHERE name = ?"
-            results = conn.execute(query, (name,)).fetchall()
-        else:
-            query = "SELECT * FROM npc"
-            results = conn.execute(query).fetchall()
-
-    return jsonify([dict(row) for row in results])
-
-@data_bp.route('/data/npc/delete/<int:id>', methods=['DELETE'])
-def delete_custom_npc(id):
-    with get_db_connection() as conn:
-        # Проверяем, существует ли персонаж с таким ID
-        npc = conn.execute("SELECT * FROM npc WHERE id = ?", (id,)).fetchone()
-        if not npc:
-            return jsonify({"error": "Персонаж не найден"}), 404
-
-        # Удаляем персонажа
-        conn.execute("DELETE FROM npc WHERE id = ?", (id,))
-        conn.commit()
-
-    return jsonify({"message": f"Персонаж с ID {id} успешно удалён"}), 200
-
-@data_bp.route('/data/npc/update/', methods=['POST'])
-def update_custom_npc():
-    data = request.form
-    cd = data.get('cd')
-    id = data.get('id')
-    name = data.get('name')
-    health = data.get('health')
-    text = data.get('text')
-
-    with get_db_connection() as conn:
-        # Проверяем, существует ли запись с данным ID
-        cursor = conn.execute("SELECT id FROM npc WHERE id = ?", (id,))
-        if cursor.fetchone() is None:
-            return jsonify({"error": f"Персонаж с ID {id} не найден"}), 404
-
-        # Обновляем запись
-        conn.execute("""
-            UPDATE npc SET name = ?, cd = ?, hp = ?, text = ? WHERE id = ?
-        """, (name, cd, health, text, id))
-        conn.commit()
-
-    return jsonify({"message": f"Персонаж с ID {id} успешно изменен"}), 200
-
-
-
----------------Код units\database.py:
-import sqlite3
-
-DATABASE = "../data/data.db"
-
-
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def get_main_location():
-    with get_db_connection() as conn:
-        main_location = conn.execute("""
-            SELECT id FROM locations 
-            WHERE type = 'main' AND active = 1
-        """).fetchone()
-    return main_location
+
 
 

@@ -95,7 +95,7 @@ export class LocationManager {
 
     async loadNpcs(locationId) {
         try {
-            const response = await fetch(`/api/data/locations/npc?location_id=${locationId}`);
+            const response = await fetch(`/api/data/locations/npc/?location_id=${locationId}`);
             const data = await response.json();
             this.editNpcList.innerHTML = data?.length
                 ? data.map(npc => `

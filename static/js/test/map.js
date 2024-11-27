@@ -1,7 +1,14 @@
 import {exit, sleep} from './func.js'
 import {showTab} from '../tabs.js'
 
-export async function empty(sleeper) {
+export async function map(sleeper) {
+
+    //бэкап конфига json
+    //передвижение локации
+    //деактивация полигона
+    //активация полигона
+    //рисование полигона
+
 
     //Тест
     console.log("=== Добавление NPC в локацию ===");
@@ -16,5 +23,3 @@ export async function empty(sleeper) {
 
 
 }
-
-
