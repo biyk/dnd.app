@@ -31,7 +31,8 @@ def save_config(file_name, config_data):
         with open(os.path.join(config_path, f"{file_name}.json"), 'w') as f:
             json.dump(config_data, f, indent=4)
         return True
-    except IOError:
+    except IOError as e:
+        print(e)
         return False
 
 

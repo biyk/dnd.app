@@ -11,13 +11,13 @@ const tests = { empty, tab, init, location, npc, map};
 
 export async function test(testing = 'all') {
     console.log("=== Начало тестирования ===");
-    //await fetch('/api/test/start');
     if (testing === 'all') {
         await empty(sleeper);
         await tab(sleeper);
         await init(sleeper);
         await location(sleeper);
         await npc(sleeper);
+        await map(sleeper);
     } else if (typeof tests[testing] === 'function') {
         // Вызываем функцию из объекта tests
         await tests[testing](sleeper);
@@ -25,7 +25,6 @@ export async function test(testing = 'all') {
         console.error(`Function "${testing}" does not exist.`);
     }
      console.info("=== Тестирование завершено ===");
-    //await fetch('/api/test/end');
 }
 
 window.test = test;
