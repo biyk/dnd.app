@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import hashlib
 from flask import Blueprint, request, jsonify, current_app
 from shapely.geometry import Polygon
 
@@ -20,7 +21,7 @@ def save_polygons():
     if not map_name:
         return jsonify({"error": "mapName is required"}), 400
 
-    # Получаем CONFIG_PATH из конфигурации приложения
+    # Получаем CONFIG_PATH из конфигу рации приложения
     config_path = current_app.config['CONFIG_PATH']
     config_file_path = os.path.join(config_path, f"{map_name}.json")
 
@@ -36,6 +37,11 @@ def save_polygons():
     # Обработка и обрезка пересекающихся полигонов
     updated_polygons = []
     for poly_data in polygons_data:
+        # Генерация MD5-хэша, если code отсутствует или пуст
+        if not poly_data.get('code'):
+            points_str = json.dumps(poly_data['points'], sort_keys=True)
+            poly_data['code'] = hashlib.md5(points_str.encode('utf-8')).hexdigest()
+
         polygon = Polygon(poly_data['points'])
         is_visible = poly_data.get('isVisible', True)
 
@@ -50,12 +56,14 @@ def save_polygons():
             for single_polygon in polygon.geoms:
                 updated_polygons.append({
                     "points": list(single_polygon.exterior.coords),
-                    "isVisible": is_visible
+                    "isVisible": is_visible,
+                    "code": poly_data['code']
                 })
         else:
             updated_polygons.append({
                 "points": list(polygon.exterior.coords),
-                "isVisible": is_visible
+                "isVisible": is_visible,
+                "code": poly_data['code']
             })
 
     map_config['polygons'] = updated_polygons

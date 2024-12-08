@@ -26,6 +26,7 @@ class MapManager {
         this.SlideMenu =  {};
         this.selectedIcon = null;
         this.points = new Map();
+        this.lastClick = {}
     }
 
     async initMap() {
@@ -214,6 +215,7 @@ class MapManager {
         });
 
         this.map.on('click', (e) => {
+            this.lastClick = e.latlng;
             if (this.drawingMode) {
                 this.markerCount += 1;
                 this.polygonPoints.push([e.latlng.lat, e.latlng.lng]);
@@ -221,9 +223,6 @@ class MapManager {
                 const marker = L.marker([e.latlng.lat, e.latlng.lng], { icon: createNumberedIcon(this.markerCount) }).addTo(this.map);
                 this.polygonMarkers.push(marker);
             }
-        });
-
-        this.map.on('click', (e) => {
             if (this.selectedIcon) {
                 // Размещаем маркер с выбранной иконкой
                 let id = new Date().getTime();

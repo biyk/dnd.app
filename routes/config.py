@@ -124,18 +124,26 @@ def update_init_config():
         return jsonify({"error": f"{map_name}.json not found"}), 404
 
     # Обновляем начальные параметры конфигурации
-    setTimer = data.get('round') != map_config['init']['round']
-
+    setTimer = data.get('try') != map_config['init']['try']
+    prev = map_config['init']['try']
     map_config['init'] = {
         'round': data.get('round'),
         'try': data.get('try'),
         'all': data.get('all'),
         'rating': data.get('rating'),
         'next': data.get('next'),
+        'prev': prev,
     }
     map_config['lastUpdated'] = int(time.time())
     if setTimer:
-        map_config['timer'] = int(time.time() + 60)
+        _try = map_config['init']['try']
+        player = next((item for item in map_config["init"]["all"] if item["init"] == _try), None)
+        prev_player = next((item for item in map_config["init"]["all"] if item["init"] == prev), None)
+
+        if player['npc'] == 'false' and prev_player['npc'] == 'false':
+            map_config['timer'] = int(max(time.time(), map_config['timer']) + 60)
+        else:
+            map_config['timer'] = int(time.time() + 60)
 
     if not save_config(map_name, map_config):
         return jsonify({"error": f"Error saving updated configuration to '{map_name}.json'"}), 500
