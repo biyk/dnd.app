@@ -18,7 +18,7 @@ test_bp = Blueprint('test', __name__)
 
 @test_bp.route('/test/start', methods=['GET'])
 def test_start():
-    BACKUP_DIR = './config/backup'
+    BACKUP_DIR = 'backup'
     # Создать папку для бэкапов, если её нет
     if not os.path.exists(BACKUP_DIR):
         os.makedirs(BACKUP_DIR)
@@ -31,13 +31,12 @@ def test_start():
 
 @test_bp.route('/test/end', methods=['GET'])
 def test_end():
-    BACKUP_DIR = './config/backup/'
+    BACKUP_DIR = 'backup'
     # Восстановить файл конфигов из бэкапа
     map = query_main_active_location()
     backup_file_path = os.path.join(BACKUP_DIR, map)
 
     data = load_config(backup_file_path)
-    print(data,backup_file_path)
     save_config(map, data)
 
     # Удалить файл бэкапа и папку
@@ -47,7 +46,7 @@ def test_end():
     if os.path.exists(BACKUP_DIR) and not os.listdir(BACKUP_DIR):
         os.rmdir(BACKUP_DIR)
 
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "file": backup_file_path})
 
 
 
@@ -73,7 +72,7 @@ def test_polygon(code):
         polygon = Polygon(points)
         centroid = polygon.centroid
 
-        return jsonify({"status": "success", "centroid": [centroid.x, centroid.y]})
+        return jsonify({"status": "success", "centroid": [centroid.x, centroid.y], "code": code})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

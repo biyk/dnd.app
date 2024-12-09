@@ -1,4 +1,4 @@
-export function exit(text){
+export function exit(text=''){
     console.error(text);
     die();
 }

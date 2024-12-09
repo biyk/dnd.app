@@ -1,5 +1,5 @@
 
-export function  createPolygons(config) {
+export function createPolygons(config) {
     this.polygons.forEach(polygon => this.map.removeLayer(polygon.layer));
     this.polygons = [];
     config.polygons.forEach(polygonData => {
@@ -16,6 +16,7 @@ export function  createPolygons(config) {
         this.polygons.push({
             layer: polygonLayer,
             points: polygonData.points,
+            code: polygonData.code,
             isVisible: polygonLayer.isVisible,
         });
     });

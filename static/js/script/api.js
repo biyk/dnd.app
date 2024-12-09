@@ -28,6 +28,7 @@ export async function getConfig(mapName) {
 
     const polygonsData = this.polygons.map(polygon => ({
       points: polygon.points,
+      code: polygon.code,
       isVisible: polygon.layer.isVisible,
     }));
 

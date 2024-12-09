@@ -10,25 +10,27 @@ export async function map(sleeper) {
     console.log("=== передвижение локации ===");
     await sleep(sleeper);
     await (async () => {
-        let test_poligon = manager.polygons[1];
+        let test_poligon = manager.config.polygons[1];
         let code = test_poligon.code;
-        console.log(test_poligon)
+        if (!code){
+             await fetch('/api/test/end');
+             exit("✗ Коды полигонов не заданы");
+        }
         const response = await fetch(`/api/test/polygon/${code}`);
         const data = await response.json();
         if (data.status==='success'){
-            let isVisible = test_poligon.isVisible
-            console.log(test_poligon.isVisible);
-
+            const isVisible = test_poligon.isVisible
+            console.log(isVisible)
             manager.map.setView([data.centroid[0], data.centroid[1]],manager.config.maxLevel);
             await fetch(`/api/test/click`);
             await sleep(sleeper+300);
-            console.log(test_poligon.isVisible);
-            if(isVisible!==test_poligon.isVisible){
+            console.log(isVisible,  window.mapManager.polygons[1])
+            if(isVisible!==window.mapManager.config.polygons[1].isVisible){
                 console.log("✓ Видимость полигона изменена");
             } else {
+                //await fetch('/api/test/end');
                 exit("✗ Полигон не изменил видимость");
             }
-            //console.log(manager.lastClick,data.centroid);
         }
 
         if(1){
