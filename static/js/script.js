@@ -64,15 +64,12 @@ class MapManager {
 
         const mapOptions = {
             maxBounds: bounds,
-              zoomControl: this.admin_mode,
-            /*
+            zoomControl: this.admin_mode,
             dragging: this.admin_mode,
-
             scrollWheelZoom: this.admin_mode,
             doubleClickZoom: this.admin_mode,
             touchZoom: this.admin_mode,
             keyboard: this.admin_mode,
-             */
         };
 
         this.map = L.map('map', mapOptions);
@@ -244,6 +241,7 @@ class MapManager {
                 console.log(
                     Array.from(this.points)
                 )
+                this.setPolygonClickability(true);
             }
         });
 
@@ -314,6 +312,7 @@ class MapManager {
             button.addEventListener('click', () => {
                 this.selectedIcon = icon; // Запоминаем выбранную иконку
                 sidebar.style.display = 'none'; // Скрываем сайдбар
+                this.setPolygonClickability(false);
             });
             list.appendChild(button);
         });

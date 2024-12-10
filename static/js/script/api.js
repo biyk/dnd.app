@@ -51,7 +51,10 @@ export async function getConfig(mapName) {
       }),
     })
       .then(response => response.json())
-      .then(data => console.log("Data sent successfully:", data))
+      .then((data) => {
+        console.log("Data sent successfully:", data)
+        this.config = data.updatedConfig;
+      })
       .catch(error => console.error("Error sending polygons data:", error));
   }
 
