@@ -49,7 +49,7 @@ export async function getConfig(mapName) {
         mapName: this.mapName,
         polygons: polygonsData,
         markers: markerData,
-        measurePoints: this.measurePoints,
+        measure: this.measure,
         settings: this.settings,
         mainPolygon: this.mainPolygon ? { points: this.mainPolygon.getLatLngs() } : null,
         mapState: {
@@ -76,7 +76,7 @@ export async function getConfig(mapName) {
       startCountdown(config.timer);
       updateSkullColor(config.init.rating);
       updateInfoBar(config);
-      this.measurePoints = config.measurePoints;
+      this.measurePoints = config.measure.points;
       this.settings.updateSettings(config.settings);
       this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
       this.drawGrid();

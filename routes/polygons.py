@@ -17,7 +17,7 @@ def save_polygons():
     polygons_data = data.get('polygons', [])
     markers_data = data.get('markers', [])
     map_state = data.get('mapState', {})
-    measurePoints = data.get('measurePoints', {})
+    measure = data.get('measure', {})
     settings = data.get('settings', {})
     main_polygon = data.get('mainPolygon', {})
 
@@ -74,7 +74,7 @@ def save_polygons():
     map_config['markers'] = markers_data
     map_config['mainPolygon'] = main_polygon
     map_config['settings'] = settings
-    map_config['measurePoints'] = measurePoints
+    map_config['measure'] = measure
     map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
 
     try:

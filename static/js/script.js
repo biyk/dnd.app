@@ -28,7 +28,7 @@ class MapManager {
         this.SlideMenu =  {};
         this.selectedIcon = null;
         this.points = new Map();
-        this.measurePoints = [];
+        this.measure = {};
         this.settings = null;
     }
 
@@ -41,7 +41,7 @@ class MapManager {
         if (!config) return;
         this.config = config;
         this.lastUpdated = config.lastUpdated;
-        this.measurePoints = config.measurePoints;
+        this.measure = config.measure;
         this.initializeMap(config);
         this.createPolygons(config);
         this.createMarkers(config);
@@ -143,7 +143,7 @@ class MapManager {
                     this.sendPolygonsData();
                 } else if (this.polygonPoints.length == 2) {
                     this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
-                    this.measurePoints = this.polygonPoints;
+                    this.measure.points = this.polygonPoints;
                     this.calculateDistanceAndDraw()
                 } else {
 
@@ -325,7 +325,7 @@ class MapManager {
 
     // Функция для расчета расстояния, добавления маркеров, линии и сетки
     calculateDistanceAndDraw() {
-        let points = this.measurePoints;
+        let points = this.measure.points;
         if (points.length !== 2) {
             console.error('The function requires exactly two points.');
             return;
@@ -350,7 +350,7 @@ class MapManager {
     // Функция для рисования сетки
     drawGrid() {
         if (this.gridLayer) this.map.removeLayer(this.gridLayer);
-        let points = this.measurePoints
+        let points = this.measure.points;
         console.log(points, this.settings.show_grid);
         if (points.length !== 2 || !this.settings.show_grid) return;
 
