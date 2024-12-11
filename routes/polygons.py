@@ -15,7 +15,10 @@ def save_polygons():
 
     map_name = data.get('mapName')
     polygons_data = data.get('polygons', [])
+    markers_data = data.get('markers', [])
     map_state = data.get('mapState', {})
+    measurePoints = data.get('measurePoints', {})
+    settings = data.get('settings', {})
     main_polygon = data.get('mainPolygon', {})
 
     if not map_name:
@@ -68,7 +71,10 @@ def save_polygons():
 
     map_config['polygons'] = updated_polygons
     map_config['mapState'] = map_state
+    map_config['markers'] = markers_data
     map_config['mainPolygon'] = main_polygon
+    map_config['settings'] = settings
+    map_config['measurePoints'] = measurePoints
     map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
 
     try:

@@ -1,6 +1,8 @@
 import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
 import {createNumberedIcon, getParticipantHTML, updateInfoBar} from './script/helpers.js';
 import {checkTab} from './tabs.js';
+import {drowMarker, createMarkers} from './marker.js';
+import {Settings} from './settings.js';
 import {
     createMainPolygon,
     createPolygons,
@@ -26,7 +28,8 @@ class MapManager {
         this.SlideMenu =  {};
         this.selectedIcon = null;
         this.points = new Map();
-        this.lastClick = {}
+        this.measurePoints = [];
+        this.settings = null;
     }
 
     async initMap() {
@@ -38,13 +41,18 @@ class MapManager {
         if (!config) return;
         this.config = config;
         this.lastUpdated = config.lastUpdated;
+        this.measurePoints = config.measurePoints;
         this.initializeMap(config);
         this.createPolygons(config);
+        this.createMarkers(config);
         this.setDrawButtonHandler();
         this.setReverseButtonHandler(config);
         this.setMapEventHandlers();
         this.initializeMarkerMenu();
-        updateInfoBar(config);
+        this.updateInfoBar(config);
+        this.settings = new Settings(config.settings);
+        this.drawGrid();
+
         if (!this.admin_mode) setInterval(() => this.checkForConfigUpdates(), 1000);
     }
 
@@ -86,6 +94,9 @@ class MapManager {
 
     createPolygons(config) {
         createPolygons.call(this,config)
+    }
+    createMarkers(config) {
+        createMarkers.call(this,config)
     }
 
     createPolygonClickHandler(polygonLayer) {
@@ -130,6 +141,12 @@ class MapManager {
                 if (this.polygonPoints.length > 2) {
                     this.createNewPolygon();
                     this.sendPolygonsData();
+                } else if (this.polygonPoints.length == 2) {
+                    this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
+                    this.measurePoints = this.polygonPoints;
+                    this.calculateDistanceAndDraw()
+                } else {
+
                 }
             }
         });
@@ -217,32 +234,26 @@ class MapManager {
                 this.markerCount += 1;
                 this.polygonPoints.push([e.latlng.lat, e.latlng.lng]);
 
-                const marker = L.marker([e.latlng.lat, e.latlng.lng], { icon: createNumberedIcon(this.markerCount) }).addTo(this.map);
+                const marker = L.marker([e.latlng.lat, e.latlng.lng], {
+                    icon: createNumberedIcon(this.markerCount),
+                    draggable: true
+                }).addTo(this.map);
                 this.polygonMarkers.push(marker);
             }
             if (this.selectedIcon) {
                 // Размещаем маркер с выбранной иконкой
-                let id = new Date().getTime();
-                const marker = L.marker(e.latlng, {
-                    icon: L.divIcon({
-                        className: 'custom-marker',
-                        html: `<div data-id>${this.selectedIcon.emoji}</div>`,
-                    }),
-                    draggable: true
-                }).addTo(this.map);
-                marker.bindPopup(`
-                   <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
-                 `);
-
-                this.points.set(id, marker);
+                this.drowMarker({
+                    latlng: e.latlng,
+                    selectedIcon: this.selectedIcon
+                })
                 // Сбрасываем выбранную иконку
                 this.selectedIcon = null;
                 document.querySelector('.marker-menu').style.display = 'block'; // Показываем сайдбар
-                console.log(
-                    Array.from(this.points)
-                )
+
                 this.setPolygonClickability(true);
+                this.sendPolygonsData();
             }
+
         });
 
         this.map.whenReady(this.whenReady);
@@ -255,12 +266,20 @@ class MapManager {
             })
         }
 
+        document.body.addEventListener('update_config', (e) => {
+            this.sendPolygonsData();
+        })
+
     }
 
     whenReady(){
         checkTab();
         this.SlideMenu =  new SlideMenu();
         this.SlideMenu.initializeMapMarkers(this.map);
+    }
+
+    drowMarker(data) {
+        drowMarker.call(this, data);
     }
 
     removeMarker(index) {
@@ -270,31 +289,15 @@ class MapManager {
             this.points.delete(index);
         }
     }
+    toggleMarker(index) {
+        const marker = this.points.get(index);
+        if (marker) {
+            marker._icon.style.display = 'none';
+        }
+    }
 
     updateInfoBar(data) {
-        const infoBar = document.getElementById('info-bar');
-        if (!infoBar) return;
-        const round = data.init.round;
-        const tryNumber = data.init.try; // Пример: чтобы отображать дробное значение
-        const nextNumber = data.init.next; // Пример: чтобы отображать дробное значение
-        const participants = data.init.all;
-
-        // Сортируем участников по инициативе
-        const sortedParticipants = participants.slice().sort((a, b) => b.init - a.init);
-
-        // Находим текущий и следующий ход
-        const currentIndex = sortedParticipants.findIndex(participant => participant.init.toString() === tryNumber.toString());
-        const nextIndex = sortedParticipants.findIndex(participant => participant.init.toString() === nextNumber.toString());
-        const current = sortedParticipants[currentIndex] || null;
-        const next = sortedParticipants[nextIndex] || null;
-
-
-        // Обновляем информационную строку
-        infoBar.innerHTML = `
-      Раунд: <span>${round}</span>,
-      Ход: ${current ? getParticipantHTML(current) : '---'},
-      Следующий: ${next ? getParticipantHTML(next) : '---'}
-    `;
+      updateInfoBar(data);
     }
 
     initializeMarkerMenu() {
@@ -318,6 +321,74 @@ class MapManager {
         });
         sidebar.appendChild(list);
         document.body.appendChild(sidebar);
+    }
+
+    // Функция для расчета расстояния, добавления маркеров, линии и сетки
+    calculateDistanceAndDraw() {
+        let points = this.measurePoints;
+        if (points.length !== 2) {
+            console.error('The function requires exactly two points.');
+            return;
+        }
+
+        const [point1, point2] = points;
+
+        // Добавление маркеров в точки
+        const marker1 = L.marker(point1).addTo(this.map);
+        const marker2 = L.marker(point2).addTo(this.map);
+
+        // Вычисление расстояния между точками
+        const distance = this.map.distance(point1, point2);
+        console.log('Point 1:', point1);
+        console.log('Point 2:', point2);
+        console.log('Distance (meters):', distance);
+        this.sendPolygonsData();
+        // Рисование сетки
+        this.drawGrid();
+    }
+
+    // Функция для рисования сетки
+    drawGrid() {
+        if (this.gridLayer) this.map.removeLayer(this.gridLayer);
+        let points = this.measurePoints
+        console.log(points, this.settings.show_grid);
+        if (points.length !== 2 || !this.settings.show_grid) return;
+
+        const bounds = this.map.getBounds();
+        const map = this.map;
+
+        // Определение двух точек и расчёт расстояния между ними в пикселях
+        const point1 = map.project([points[0][0], points[0][1]]);
+        const point2 = map.project([points[1][0], points[1][1]]);
+        const stepPixels = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2))/4;
+
+        // Определение начальных и конечных точек в пикселях
+        const topLeft = map.project(bounds.getNorthWest());
+        const bottomRight = map.project(bounds.getSouthEast());
+
+        const lines = [];
+        const lines_count = 100
+        // Горизонтальные линии
+        for (let y = point1.y - lines_count*stepPixels; y <= bottomRight.y; y += stepPixels) {
+            const start = map.unproject([topLeft.x, y]);
+            const end = map.unproject([bottomRight.x, y]);
+            lines.push(L.polyline([
+                [start.lat, start.lng],
+                [end.lat, end.lng]
+            ], { color: 'blue', weight: 1 }));
+        }
+
+        // Вертикальные линии
+        for (let x = point1.x - lines_count*stepPixels; x <= bottomRight.x; x += stepPixels) {
+            const start = map.unproject([x, topLeft.y]);
+            const end = map.unproject([x, bottomRight.y]);
+            lines.push(L.polyline([
+                [start.lat, start.lng],
+                [end.lat, end.lng]
+            ], { color: 'blue', weight: 1 }));
+        }
+
+        this.gridLayer = L.layerGroup(lines).addTo(map);
     }
 
 }

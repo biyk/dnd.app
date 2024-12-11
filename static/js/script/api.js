@@ -32,6 +32,11 @@ export async function getConfig(mapName) {
       isVisible: polygon.layer.isVisible,
     }));
 
+    const markerData = Array.from(this.points.values()).map(point => ({
+      settings: point.settings,
+    }));
+
+
     const center = this.map.getCenter();
     const zoomLevel = this.map.getZoom();
 
@@ -43,6 +48,9 @@ export async function getConfig(mapName) {
       body: JSON.stringify({
         mapName: this.mapName,
         polygons: polygonsData,
+        markers: markerData,
+        measurePoints: this.measurePoints,
+        settings: this.settings,
         mainPolygon: this.mainPolygon ? { points: this.mainPolygon.getLatLngs() } : null,
         mapState: {
           center: { lat: center.lat, lng: center.lng },
@@ -61,7 +69,6 @@ export async function getConfig(mapName) {
   export async function checkForConfigUpdates() {
     const config = await getConfig(this.mapName);
 
-
     if (config && config.lastUpdated !== this.lastUpdated) {
       this.lastUpdated = config.lastUpdated;
       this.createPolygons(config);
@@ -69,7 +76,10 @@ export async function getConfig(mapName) {
       startCountdown(config.timer);
       updateSkullColor(config.init.rating);
       updateInfoBar(config);
+      this.measurePoints = config.measurePoints;
+      this.settings.updateSettings(config.settings);
       this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);
+      this.drawGrid();
       console.log("Map data updated due to configuration change.");
     }
   }

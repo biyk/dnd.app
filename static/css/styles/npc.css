@@ -30,6 +30,10 @@
   border-radius: 4px;
   font-size: 14px;
 }
+.npc-form__checkbox {
+    width: 18px;
+}
+
 
 .npc-form__button {
   display: block;

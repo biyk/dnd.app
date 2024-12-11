@@ -35,6 +35,16 @@ body, html, #map {
     border-radius: 5px;
     cursor: pointer;
 }
+#measure-button {
+    position: absolute;
+    bottom: 10px;
+    left: 225px;
+    z-index: 1000;
+    padding: 10px;
+    background: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
 
 #audio {
     position: absolute;
