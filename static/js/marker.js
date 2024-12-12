@@ -1,3 +1,5 @@
+import {getRandomColor} from "./script/helpers.js";
+
 export function drowMarker(data) {
     let id = data.id  || new Date().getTime();
     const marker = L.marker(data.latlng, {
@@ -7,16 +9,21 @@ export function drowMarker(data) {
         }),
         draggable: true
     }).addTo(this.map);
-
     let HideShoeText = data.show ?'Hide' : 'Show';
+    let backgroundColor = data.backgroundColor || getRandomColor();
     marker.bindPopup(`
                      <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
                      <button onclick="window.mapManager.toggleMarker(${id})">${HideShoeText}</button>
                    `);
+    marker._icon.style.opacity = data.show ? 1 : (window.admin_mode) ? 0.5: 0;
+    marker._icon.style.backgroundColor = backgroundColor;
     marker.settings = {
         latlng: data.latlng,
         selectedIcon: data.selectedIcon,
-        draggable: true
+        backgroundColor: backgroundColor,
+        draggable: true,
+        show: !!data.show,
+        id: id,
     }
     this.points.set(id, marker);
 }
@@ -31,7 +38,23 @@ export function createMarkers(config){
                 id: settings.id,
                 selectedIcon: settings.selectedIcon,
                 latlng: settings.latlng,
+                backgroundColor: settings.backgroundColor,
+                show: settings.show,
             })
         });
     }
+}
+
+export function updateMarkers(config){
+    config.markers.forEach(markerData => {
+        let id = markerData.settings.id;
+        let marker = this.points.get(id);
+        let show = markerData.settings.show
+        marker.settings.show = show;
+        marker.setLatLng([
+            markerData.settings.latlng.lat,
+            markerData.settings.latlng.lng,
+        ])
+        marker._icon.style.opacity = show ? 1 : (window.admin_mode) ? 0.5: 0;
+    });
 }

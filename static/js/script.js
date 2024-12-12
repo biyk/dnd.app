@@ -1,7 +1,7 @@
 import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
 import {createNumberedIcon, getParticipantHTML, updateInfoBar} from './script/helpers.js';
 import {checkTab} from './tabs.js';
-import {drowMarker, createMarkers} from './marker.js';
+import {drowMarker, createMarkers, updateMarkers} from './marker.js';
 import {Settings} from './settings.js';
 import {
     createMainPolygon,
@@ -30,6 +30,7 @@ class MapManager {
         this.points = new Map();
         this.measure = {};
         this.settings = null;
+        this.Listner =  document.body;
     }
 
     async initMap() {
@@ -144,6 +145,7 @@ class MapManager {
                 } else if (this.polygonPoints.length == 2) {
                     this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
                     this.measure.points = this.polygonPoints;
+                    this.measure.ft = window.prompt('Сколько футов выделено?', 5);
                     this.calculateDistanceAndDraw()
                 } else {
 
@@ -204,6 +206,10 @@ class MapManager {
 
     async checkForConfigUpdates() {
         await checkForConfigUpdates.call(this);
+    }
+
+    updateMarkers(config){
+        updateMarkers.call(this,config);
     }
 
     setPolygonsOpacity(opacity) {
@@ -292,7 +298,9 @@ class MapManager {
     toggleMarker(index) {
         const marker = this.points.get(index);
         if (marker) {
-            marker._icon.style.display = 'none';
+            marker.settings.show = !marker.settings.show
+            marker._icon.style.opacity = marker.settings.show ? 1 : (admin_mode) ? 0.5: 0;
+            this.Listner.dispatchEvent(new Event('update_config'));
         }
     }
 
@@ -304,14 +312,14 @@ class MapManager {
         const sidebar = document.createElement('div');
         sidebar.classList.add('marker-menu');
         this.menu = sidebar;
-        const icons = [{ name: "Человечек", emoji: "👤" },
+        const icons = [{ name: "Человечек", emoji: "&#128100;" },
             { name: "Дерево", emoji: "🌳" },
-            { name: "Черепушка", emoji: "💀" },];
+            { name: "Черепушка", emoji: "&#128128;" },];
         const list = document.createElement('ul');
         // Создаем кнопки для каждой иконки
         icons.forEach(icon => {
             const button = document.createElement('button');
-            button.textContent = `${icon.emoji} ${icon.name}`;
+            button.innerHTML = `${icon.emoji} ${icon.name}`;
             button.addEventListener('click', () => {
                 this.selectedIcon = icon; // Запоминаем выбранную иконку
                 sidebar.style.display = 'none'; // Скрываем сайдбар
@@ -360,7 +368,10 @@ class MapManager {
         // Определение двух точек и расчёт расстояния между ними в пикселях
         const point1 = map.project([points[0][0], points[0][1]]);
         const point2 = map.project([points[1][0], points[1][1]]);
-        const stepPixels = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2))/4;
+        const cell_per_step = parseInt(this.measure.ft)/5
+        const stepPixels = Math.sqrt(
+            Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2)
+        )/cell_per_step;
 
         // Определение начальных и конечных точек в пикселях
         const topLeft = map.project(bounds.getNorthWest());
