@@ -1,5 +1,5 @@
 import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
-import {createNumberedIcon, getParticipantHTML, updateInfoBar} from './script/helpers.js';
+import {createNumberedIcon, toggleAdminMode, updateInfoBar} from './script/helpers.js';
 import {checkTab} from './tabs.js';
 import {drowMarker, createMarkers, updateMarkers} from './marker.js';
 import {Settings} from './settings.js';
@@ -276,6 +276,9 @@ class MapManager {
             this.sendPolygonsData();
         })
 
+        document.body.addEventListener('admin_mode', (e) => {
+            this.toggleAdminMode();
+        })
     }
 
     whenReady(){
@@ -408,6 +411,10 @@ class MapManager {
             marker.settings.text = textarea.value
             this.Listner.dispatchEvent(new Event('update_config'));
         }
+    }
+
+    toggleAdminMode() {
+        toggleAdminMode.call(this)
     }
 }
 

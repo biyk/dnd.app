@@ -97,3 +97,15 @@ export function getRandomColor() {
     }
     return color;
 }
+
+export function toggleAdminMode(){
+    if (window.admin_mode){
+        this.map.setView(
+            [this.savedMapCenter.lat, this.savedMapCenter.lng],
+            this.savedMapZoom
+        );
+    } else {
+        this.savedMapCenter = this.map.getCenter();
+        this.savedMapZoom = this.map.getZoom();
+    }
+}

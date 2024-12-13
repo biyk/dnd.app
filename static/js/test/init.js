@@ -85,13 +85,16 @@ export async function init(sleeper) {
      await (async () => {
          let tempPrompt = window.prompt;
          let newName = "1";
+         let old_value = manager.charactersData[0].hp_now
+
          window.prompt = () => newName;
 
          const firstCharacterNameSpan = document.querySelector('.editable-value.hp_now');
          firstCharacterNameSpan.click();
          await sleep(sleeper);
-
-         if (manager.charactersData[0].hp_now === newName) {
+        let new_value = manager.charactersData[0].hp_now
+         console.log(manager.charactersData[0].hp_now -1 , newName)
+         if (old_value -1 === new_value) {
              console.log("✓ Изменение данных персонажа работает");
          } else {
              exit("✗ Изменение данных персонажа не работает");

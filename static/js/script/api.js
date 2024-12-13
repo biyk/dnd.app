@@ -24,7 +24,7 @@ export async function getConfig(mapName) {
 }
 
 export function sendPolygonsData() {
-    if (!this.admin_mode) return;
+    if (!window.admin_mode) return;
 
     const polygonsData = this.polygons.map(polygon => ({
         points: polygon.points,

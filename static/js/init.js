@@ -39,6 +39,11 @@ class InitiativeManager {
         this.displayCharactersAndSendInit();
     }
 
+    updateCharacterPropertyHp(index, property, value){
+         this.charactersData[index][property] = this.charactersData[index][property] - value;
+          this.displayCharactersAndSendInit();
+    }
+
     updateCharacterPropertyInit(index, property, value) {
         while (!this.isUniqueInitiative(value)) {
             value = (parseFloat(value) + 0.1).toFixed(1);
@@ -106,7 +111,7 @@ class InitiativeManager {
             const nameSpan = createEditableSpan(`Имя: ${character.name}`, "name", index, this.updateCharacterProperty.bind(this));
             const initSpan = createEditableSpan(`Init: ${character.init}`, "init", index, this.updateCharacterPropertyInit.bind(this));
             const cdSpan = createEditableSpan(`КД: ${character.cd}`, "cd", index, this.updateCharacterProperty.bind(this));
-            const hpSpan = createEditableSpan(`HP: ${character.hp_now}`, "hp_now", index, this.updateCharacterProperty.bind(this),`/ ${character.hp_max}`);
+            const hpSpan = createEditableSpan(`HP: ${character.hp_now}`, "hp_now", index, this.updateCharacterPropertyHp.bind(this),`/ ${character.hp_max}`);
             const expSpanTitle = character.npc === 'true' ? 'DNG' : 'LVL';
             const expSpan = createEditableSpan(`${expSpanTitle}: ${character.exp}`, "exp", index, this.updateCharacterProperty.bind(this));
 
