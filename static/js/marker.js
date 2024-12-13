@@ -9,22 +9,30 @@ export function drowMarker(data) {
         }),
         draggable: true
     }).addTo(this.map);
-    let HideShoeText = data.show ?'Hide' : 'Show';
     let backgroundColor = data.backgroundColor || getRandomColor();
-    marker.bindPopup(`
-                     <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
-                     <button onclick="window.mapManager.toggleMarker(${id})">${HideShoeText}</button>
-                   `);
+    let text = data.text ?? '';
+    if (window.admin_mode){
+        marker.bindPopup(`
+            <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
+            <button onclick="window.mapManager.toggleMarker(${id})">Toggle</button>
+            <textarea onchange="window.mapManager.changeMarkerText(${id}, this)">${text}</textarea>
+        `);
+    }
+
     marker._icon.style.opacity = data.show ? 1 : (window.admin_mode) ? 0.5: 0;
     marker._icon.style.backgroundColor = backgroundColor;
     marker.settings = {
         latlng: data.latlng,
         selectedIcon: data.selectedIcon,
+        text: text,
         backgroundColor: backgroundColor,
         draggable: true,
         show: !!data.show,
         id: id,
     }
+    marker.on('dragend', (e) => {
+        document.body.dispatchEvent(new Event('update_config'));
+    })
     this.points.set(id, marker);
 }
 
@@ -32,7 +40,6 @@ export function createMarkers(config){
     console.log(config.markers)
     if (config.markers){
         config.markers.forEach(markerData => {
-            console.log(markerData)
             let settings = markerData.settings;
             this.drowMarker({
                 id: settings.id,
@@ -40,6 +47,7 @@ export function createMarkers(config){
                 latlng: settings.latlng,
                 backgroundColor: settings.backgroundColor,
                 show: settings.show,
+                text: settings.text,
             })
         });
     }

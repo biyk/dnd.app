@@ -402,6 +402,13 @@ class MapManager {
         this.gridLayer = L.layerGroup(lines).addTo(map);
     }
 
+    changeMarkerText(id, textarea) {
+        const marker = this.points.get(id);
+        if (marker) {
+            marker.settings.text = textarea.value
+            this.Listner.dispatchEvent(new Event('update_config'));
+        }
+    }
 }
 
 const mapManager = new MapManager();
