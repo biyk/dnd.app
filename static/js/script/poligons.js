@@ -2,24 +2,27 @@
 export function createPolygons(config) {
     this.polygons.forEach(polygon => this.map.removeLayer(polygon.layer));
     this.polygons = [];
-    config.polygons.forEach(polygonData => {
-        const polygonLayer = L.polygon(polygonData.points, {
-            color: 'black',
-            fillColor: 'black',
-            fillOpacity: polygonData.isVisible ? 1.0 : 0.0,
-            opacity: polygonData.isVisible ? 1.0 : 0.0,
-            weight: 1,
-        }).addTo(this.map);
-        polygonLayer.isVisible = polygonData.isVisible;
-        polygonLayer.clickHandler = this.createPolygonClickHandler(polygonLayer);
-        polygonLayer.on('click', polygonLayer.clickHandler);
-        this.polygons.push({
-            layer: polygonLayer,
-            points: polygonData.points,
-            code: polygonData.code,
-            isVisible: polygonLayer.isVisible,
+    if (config.polygons){
+        config.polygons.forEach(polygonData => {
+            const polygonLayer = L.polygon(polygonData.points, {
+                color: 'black',
+                fillColor: 'black',
+                fillOpacity: polygonData.isVisible ? 1.0 : 0.0,
+                opacity: polygonData.isVisible ? 1.0 : 0.0,
+                weight: 1,
+            }).addTo(this.map);
+            polygonLayer.isVisible = polygonData.isVisible;
+            polygonLayer.clickHandler = this.createPolygonClickHandler(polygonLayer);
+            polygonLayer.on('click', polygonLayer.clickHandler);
+            this.polygons.push({
+                layer: polygonLayer,
+                points: polygonData.points,
+                code: polygonData.code,
+                isVisible: polygonLayer.isVisible,
+            });
         });
-    });
+    }
+
     if (config.mainPolygon) {
         if (this.mainPolygon) this.map.removeLayer(this.mainPolygon);
         this.mainPolygon = L.polygon(config.mainPolygon.points, {
