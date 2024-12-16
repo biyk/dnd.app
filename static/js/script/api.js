@@ -23,27 +23,51 @@ export async function getConfig(mapName) {
     }
 }
 
-export function sendPolygonsData() {
-    if (!window.admin_mode) return;
+function sendMakerData() {
+    let id = localStorage.getItem('auth_code');
 
+    if (!id) return false;
+    let point = this.points.get(parseInt(id));
+    console.log(point)
+    if (!point) return false;
+        fetch('/api/point', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            mapName: this.mapName,
+            point: point.settings,
+        }),
+    })
+        .then(response => response.json())
+        .then((data) => {
+            console.log("Data sent successfully:", data)
+            this.config = data.updatedConfig;
+        })
+        .catch(error => console.error("Error sending marker data:", error));;
+}
+
+export function sendPolygonsData() {
+    console.log('sendPolygonsData');
+    if (!window.admin_mode)
+    {
+        sendMakerData.call(this);
+        return true;
+    }
     const polygonsData = this.polygons.map(polygon => ({
         points: polygon.points,
         code: polygon.code,
         isVisible: polygon.layer.isVisible,
     }));
-
-
     const markerData = Array.from(this.points.values()).map(point => {
         point.settings.latlng = point._latlng
         return {
             settings: point.settings,
         };
     });
-
-
     const center = this.map.getCenter();
     const zoomLevel = this.map.getZoom();
-
     fetch('/api/polygons', {
         method: 'POST',
         headers: {
@@ -71,15 +95,16 @@ export function sendPolygonsData() {
 }
 
 export async function checkForConfigUpdates() {
+    if (window.admin_mode) return;
     const config = await getConfig(this.mapName);
 
     if (config && config.lastUpdated !== this.lastUpdated) {
         this.lastUpdated = config.lastUpdated;
         this.createPolygons(config);
         setAudio(config);
-        startCountdown(config.timer);
-        updateSkullColor(config.init.rating);
-        updateInfoBar(config);
+        if (typeof startCountdown !=='undefined') startCountdown(config.timer);
+        if (typeof updateSkullColor !=='undefined') updateSkullColor(config.init.rating);
+        if (typeof updateInfoBar !=='undefined') updateInfoBar(config);
         this.measurePoints = config.measure.points;
         this.settings.updateSettings(config.settings);
         this.map.setView([config.mapState.center.lat, config.mapState.center.lng], config.mapState.zoom);

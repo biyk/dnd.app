@@ -1,6 +1,5 @@
 .marker-menu button {
     margin: 5px;
-    padding: 10px;
     background-color: #f0f0f0;
     border: none;
     border-radius: 5px;
@@ -31,4 +30,8 @@
     box-shadow: rgba(0, 0, 0, 0.3) -2px 0px 5px;
     z-index: 9999;
     overflow-y: auto;
+}
+
+.marker-menu button.point-button {
+    display: inline-block;
 }

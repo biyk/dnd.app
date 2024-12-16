@@ -1,7 +1,7 @@
 import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
 import {createNumberedIcon, toggleAdminMode, updateInfoBar} from './script/helpers.js';
 import {checkTab} from './tabs.js';
-import {drowMarker, createMarkers, updateMarkers} from './marker.js';
+import {drowMarker, createMarkers, updateMarkers, initializeMarkerMenu} from './marker.js';
 import {Settings} from './settings.js';
 import {
     createMainPolygon,
@@ -54,7 +54,7 @@ class MapManager {
         this.settings = new Settings(config.settings);
         this.drawGrid();
 
-        if (!this.admin_mode) setInterval(() => this.checkForConfigUpdates(), 1000);
+        setInterval(() => this.checkForConfigUpdates(), 1000);
     }
 
     initializeMap(config) {
@@ -272,6 +272,20 @@ class MapManager {
             })
         }
 
+        let authButton = document.getElementById('auth');
+        if (authButton) {
+            authButton.addEventListener('click', (e) => {
+                let auth_code = prompt('Enter auth code');
+                let point = (this.points.get(parseInt(auth_code)));
+
+                if (point ){
+                    localStorage.setItem('auth_code', auth_code);
+                    point.dragging.enable();
+                    console.log(point)
+                }
+            });
+        }
+
         document.body.addEventListener('update_config', (e) => {
             this.sendPolygonsData();
         })
@@ -312,26 +326,8 @@ class MapManager {
     }
 
     initializeMarkerMenu() {
-        const sidebar = document.createElement('div');
-        sidebar.classList.add('marker-menu');
-        this.menu = sidebar;
-        const icons = [{ name: "Человечек", emoji: "&#128100;" },
-            { name: "Дерево", emoji: "🌳" },
-            { name: "Черепушка", emoji: "&#128128;" },];
-        const list = document.createElement('ul');
-        // Создаем кнопки для каждой иконки
-        icons.forEach(icon => {
-            const button = document.createElement('button');
-            button.innerHTML = `${icon.emoji} ${icon.name}`;
-            button.addEventListener('click', () => {
-                this.selectedIcon = icon; // Запоминаем выбранную иконку
-                sidebar.style.display = 'none'; // Скрываем сайдбар
-                this.setPolygonClickability(false);
-            });
-            list.appendChild(button);
-        });
-        sidebar.appendChild(list);
-        document.body.appendChild(sidebar);
+        initializeMarkerMenu.call(this)
+
     }
 
     // Функция для расчета расстояния, добавления маркеров, линии и сетки

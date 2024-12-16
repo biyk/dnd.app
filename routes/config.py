@@ -200,3 +200,54 @@ def get_dm_config():
         # Печатаем ошибку, если что-то пошло не так
         print(f"Error loading config: {e}")
         return jsonify({"error": "Error loading configuration"}), 500
+
+
+@config_bp.route('/point', methods=['POST'])
+def post_point():
+    try:
+        # Получаем имя активной локации и загружаем её конфигурацию
+        map_name = query_main_active_location()
+        map_config = load_config(map_name)
+
+        if map_config is None:
+            return jsonify({"error": f"{map_name}.json not found"}), 404
+
+        # Получаем данные из POST-запроса
+        data = request.get_json()
+        point = data.get('point', {})
+
+        if not point:
+            return jsonify({"error": "No point data provided"}), 400
+
+        # Извлекаем id, lat и lng из переданных данных
+        point_id = point.get('id')
+        latlng = point.get('latlng', {})
+        lat = latlng.get('lat')
+        lng = latlng.get('lng')
+
+        if point_id is None or lat is None or lng is None:
+            return jsonify({"error": "Invalid point data"}), 400
+
+        # Поиск точки в map_config с соответствующим ID
+        updated = False
+        for marker in map_config.get('markers', []):
+            settings = marker.get('settings', {})
+            if settings.get('id') == point_id:
+                # Обновляем координаты
+                settings['latlng'] = {'lat': lat, 'lng': lng}
+                updated = True
+                break
+
+        if not updated:
+            return jsonify({"error": f"Point with id {point_id} not found in map_config"}), 404
+
+        # Сохраняем обновлённую конфигурацию
+        save_config(map_name, map_config)
+
+        # Возвращаем обновлённую конфигурацию
+        return jsonify(map_config)
+
+    except Exception as e:
+        # Логируем ошибку и возвращаем сообщение об ошибке клиенту
+        print(f"Error processing point: {e}")
+        return jsonify({"error": "Error processing point"}), 500
