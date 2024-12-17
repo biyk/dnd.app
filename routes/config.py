@@ -241,6 +241,7 @@ def post_point():
         if not updated:
             return jsonify({"error": f"Point with id {point_id} not found in map_config"}), 404
 
+        map_config['lastUpdated'] = int(time.time())  # Временная метка в формате ISO 8601
         # Сохраняем обновлённую конфигурацию
         save_config(map_name, map_config)
 

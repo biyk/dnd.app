@@ -21,7 +21,8 @@ export  function  sendInit() {
         try: this.currentCharacterIndex,
         all: this.charactersData,
         rating: this.rating,
-        next: this.nextCharacterIndex
+        next: this.nextCharacterIndex,
+        fighting: this.fighting,
     };
     fetch("/api/config/init", {
         method: "POST",

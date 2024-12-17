@@ -28,6 +28,7 @@ function sendMakerData() {
 
     if (!id) return false;
     let point = this.points.get(parseInt(id));
+     point.settings.latlng = point._latlng
     console.log(point)
     if (!point) return false;
         fetch('/api/point', {

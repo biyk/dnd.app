@@ -67,7 +67,7 @@ class InitiativeManager {
         if (next.init == characters[0].init) {
             this.currentRound++;
         }
-
+        this.fighting = true;
         this.displayCharactersAndSendInit();
     }
 
@@ -151,7 +151,7 @@ class InitiativeManager {
     resetInitiative() {
         this.charactersData.forEach((character) => (character.init = '0'));
         this.currentRound = 1;
-
+        this.fighting = false;
         this.displayCharactersAndSendInit();
     }
 
