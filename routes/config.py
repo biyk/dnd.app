@@ -140,10 +140,11 @@ def update_init_config():
         player = next((item for item in map_config["init"]["all"] if item["init"] == _try), None)
         prev_player = next((item for item in map_config["init"]["all"] if item["init"] == prev), None)
 
-        if player['npc'] == 'false' and prev_player['npc'] == 'false':
-            map_config['timer'] = int(max(time.time(), map_config['timer']) + 60)
+        round_time = 30 if player.get('parent_name') else 60
+        if player and prev_player and player.get('npc') == 'false' and prev_player.get('npc') == 'false':
+            map_config['timer'] = int(max(time.time(), map_config['timer']) + round_time)
         else:
-            map_config['timer'] = int(time.time() + 60)
+            map_config['timer'] = int(time.time() + round_time)
 
     if not save_config(map_name, map_config):
         return jsonify({"error": f"Error saving updated configuration to '{map_name}.json'"}), 500

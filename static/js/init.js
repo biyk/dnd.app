@@ -12,6 +12,7 @@ class InitiativeManager {
 
         // Привязка обработчиков событий
         this.addEventListeners();
+        this.fillParentSelect();
     }
 
     // Функция для загрузки данных из JSON-файла
@@ -188,24 +189,42 @@ class InitiativeManager {
         const surprise = document.getElementById('new-surprise').checked;
         const npc = document.getElementById('new-npc').checked;
         const exp = document.getElementById('new-experience').value;
-
+        const count = document.getElementById('new-count').value;
+        const parent = document.getElementById('new-parent').value;
+        let parent_name = '';
         // Проверяем уникальность инициативы
-        while (!this.isUniqueInitiative(init)) {
-            init = (parseFloat(init) + 0.1).toFixed(1);
+        if (parent){
+            init = parent-0.01;
+
+              this.charactersData.forEach((character) => {
+                  if (character.init === parent) {
+                      parent_name = character.name;
+                  }
+
+            });
+        } else {
+            while (!this.isUniqueInitiative(init)) {
+                init = (parseFloat(init) + 0.1).toFixed(1);
+            }
         }
 
-        const newCharacter = {
-            init: init,
-            name: name,
-            cd: cd,
-            hp_now: hpNow,
-            hp_max: hpMax,
-            exp: exp,
-            surprise: surprise ? "true" : "false",
-            npc: npc ? "true" : "false"
-        };
+        for (let i = 0; i < count; i++) {
+            const _name = (count > 1 ?name + ' '+(i+1):name)
+            const newCharacter = {
+                init: init,
+                name: _name ,
+                cd: cd,
+                hp_now: hpNow,
+                hp_max: hpMax,
+                exp: exp,
+                parent_name: parent_name,
+                surprise: surprise ? "true" : "false",
+                npc: npc ? "true" : "false"
+            };
 
-        this.charactersData.push(newCharacter);
+            this.charactersData.push(newCharacter);
+        }
+
         this.toggleAddCharacterForm();
         this.displayCharactersAndSendInit();
     }
@@ -261,6 +280,17 @@ class InitiativeManager {
 
     infoCharacter(name) {
         infoCharacter(name);
+    }
+
+    fillParentSelect() {
+        let select = document.getElementById('new-parent');
+        this.charactersData.forEach((character) => {
+            let option = document.createElement('option');
+            option.text = character.name;
+            option.value = character.init;
+            select.appendChild(option);
+        });
+
     }
 }
 

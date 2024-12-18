@@ -106,7 +106,7 @@ export async function init(sleeper) {
      console.log("=== определение текущего персонажа ===");
      await sleep(sleeper);
      await (async () => {
-         const current = manager.charactersData.find(c => c.init.toString() === manager.currentCharacterIndex);
+         const current = manager.charactersData.find(c => c.init.toString() === manager.currentCharacterIndex.toString());
          if (current) {
              console.log("✓ Текущий персонаж корректно определен");
          } else {

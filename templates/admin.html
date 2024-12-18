@@ -54,7 +54,18 @@
                 <input type="text" id="npc-input" placeholder="Type to search NPCs..."><ul id="npc-list"></ul>
                 <script></script>
                 <!-- Форма добавления нового персонажа -->
-                <div class="add-character-form" id="add-character-form"><label>Init: <input type="text" id="new-init"></label><label>Имя: <input type="text" id="new-name"></label><label>КД: <input type="text" id="new-cd"></label><label>HP: <input type="text" id="new-hp-now"> / <input type="text" id="new-hp-max"></label><label>SUR: <input type="checkbox" id="new-surprise"></label><label>НПС: <input type="checkbox" id="new-npc" /></label><label>Опасность: <input type="text" id="new-experience" /></label><button id="add-character-button">Добавить</button></div>
+                <div class="add-character-form" id="add-character-form">
+                    <label>Init: <input type="text" id="new-init"></label>
+                    <label>Имя: <input type="text" id="new-name"></label>
+                    <label>КД: <input type="text" id="new-cd"></label>
+                    <label>HP: <input type="text" id="new-hp-now"> / <input type="text" id="new-hp-max"></label>
+                    <label>SUR: <input type="checkbox" id="new-surprise"></label>
+                    <label>НПС: <input type="checkbox" id="new-npc" /></label>
+                    <label>Опасность: <input type="text" id="new-experience" /></label>
+                     <label>количество: <input type="number" id="new-count"  value="1"/></label>
+                    <label>владелец: <select id="new-parent" ><option selected>Не выбрано</option></select></label>
+                    <button id="add-character-button">Добавить</button>
+                </div>
             </div>
         </div>
         <div id="dm-tab" class="tab-content">

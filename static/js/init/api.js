@@ -10,6 +10,7 @@ export async function loadInitiativeData() {
             this.charactersData = data.all || [];
             this.displayInfoBlocks();
             this.displayCharacters();
+            this.fillParentSelect()
         })
         .catch(error => console.error("Ошибка при загрузке данных:", error));
 }

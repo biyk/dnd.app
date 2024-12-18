@@ -43,14 +43,12 @@ function sendMakerData() {
     })
         .then(response => response.json())
         .then((data) => {
-            console.log("Data sent successfully:", data)
             this.config = data.updatedConfig;
         })
         .catch(error => console.error("Error sending marker data:", error));;
 }
 
 export function sendPolygonsData() {
-    console.log('sendPolygonsData');
     if (!window.admin_mode)
     {
         sendMakerData.call(this);
@@ -89,7 +87,6 @@ export function sendPolygonsData() {
     })
         .then(response => response.json())
         .then((data) => {
-            console.log("Data sent successfully:", data)
             this.config = data.updatedConfig;
         })
         .catch(error => console.error("Error sending polygons data:", error));
