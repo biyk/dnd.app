@@ -8,3 +8,6 @@
 *.log
 *.pdf
 /configs/backup/
+/routes/__pycache__/
+/__pycache__
+/units/__pycache__

@@ -4,6 +4,7 @@ import logging
 import re
 import sqlite3
 import os
+import json
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
@@ -108,6 +109,44 @@ def setup_database():
     conn.close()
 
 
+def save_or_update_spell(card):
+    """
+    Сохраняет данные о монстре в таблицу monsters, если такой записи ещё нет.
+    Если запись с таким URL уже существует, обновляет её.
+    """
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Проверка на существование записи с таким URL
+    cursor.execute("SELECT id FROM spells WHERE link = ?", (card['link'],))
+    result = cursor.fetchone()
+
+    if result:
+        # Обновление существующей записи
+        cursor.execute('''
+            UPDATE links
+            SET name = ?
+            WHERE link = ?
+        ''', (
+            card['title'],
+            card['link']
+        ))
+        logger.info(f"Запись для {card['title']} обновлена в базе данных")
+    else:
+        # Вставка новой записи
+        cursor.execute('''
+            INSERT INTO spells (name, link)
+            VALUES (?, ?)
+        ''', (
+            card['title'],
+            card['link'],
+
+        ))
+        logger.info(f"Новая запись для {card['title']} добавлена в базу данных")
+
+    conn.commit()
+    conn.close()
+
 def save_or_update_monster(monster_data):
     """
     Сохраняет данные о монстре в таблицу monsters, если такой записи ещё нет.
@@ -169,6 +208,15 @@ def parse_fraction(value):
         return float(value)
 
 
+def get_spells_cards():
+    # Открываем и читаем содержимое файла spells.json
+    with open('spells.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # Извлекаем ссылки из каждого объекта в списке "cards"
+    cards = [card for card in data['cards']]
+    return cards
+
 def get_monster_links():
     """
     Загружает главную страницу бестиария и парсит ссылки на страницы с описанием монстров.
@@ -225,6 +273,19 @@ def fetch_page(url, filename):
 
     return response.text
 
+
+def parse_spell_info(url):
+    full_url = f"{base_url}{url}"
+    filename = f"{url.strip('/').replace('/', '_')}.html"
+
+    logger.info(f"Начинаем парсинг страницы: {full_url}")
+    page_content = fetch_page(full_url, filename)
+    if not page_content:
+        return None
+
+    # Парсим страницу
+    soup = BeautifulSoup(page_content, 'html.parser')
+    spell_data = {}
 
 def parse_monster_info(url):
     """
@@ -291,6 +352,11 @@ def parse_monster_info(url):
 
     return monster_data
 
+def process_spells():
+    cards = get_spells_cards()
+    for card in cards:
+        spell_info = parse_spell_info(card['link'])
+        save_or_update_spell(card)
 
 def process_monsters():
     """
@@ -319,4 +385,5 @@ def process_monsters():
 
 
 # Пример вызова функции
-process_monsters()
+# process_monsters()
+process_spells()

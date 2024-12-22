@@ -33,7 +33,8 @@ export  function  sendInit() {
 }
 export async function infoCharacter(name) {
     // Поиск персонажа
-    const response = await fetch(`/api/data/monsters/html?name=${encodeURIComponent(name)}`);
+    const clear_name = name.replace(/[0-9]/g, '').trim();
+    const response = await fetch(`/api/data/monsters/html?name=${encodeURIComponent(clear_name)}`);
     const text = await response.text();
 
     // Создание попапа

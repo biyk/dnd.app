@@ -6,7 +6,7 @@ import sqlite3
 
 from units.crud_helpers import insert_record, delete_record, update_record
 from units.database import get_main_location, fetch_monsters_by_name, fetch_npc_by_name, delete_npc, add_npc, \
-    record_exists, get_db_connection
+    record_exists, get_db_connection, fetch_spells_by_name
 
 app = Flask(__name__)
 
@@ -25,6 +25,17 @@ def get_monsters():
     results = fetch_monsters_by_name(name_query)
     return jsonify([dict(row) for row in results])
 
+
+
+@data_bp.route('/data/spells/json', methods=['GET'])
+# Поиск монстров (tested)
+def get_spells():
+    name_query = request.args.get('name', '').strip()
+    if not name_query:
+        return jsonify([])
+
+    results = fetch_spells_by_name(name_query)
+    return jsonify([dict(row) for row in results])
 
 @data_bp.route('/data/monsters/html', methods=['GET'])
 # Получаем информацию о монстре из базы dnd.su (tested)
@@ -64,6 +75,50 @@ def get_monsters_html():
                 with open(html_filepath, 'r', encoding='utf-8') as html_file:
                     soup = BeautifulSoup(html_file, 'html.parser')
                     block = soup.select_one('.card__category-bestiary:not(.card__group-multiverse)')
+                    if block:
+                        return block.decode_contents(), 200
+        except Exception as e:
+            return f"Ошибка обработки файла: {e}", 500
+
+    return "HTML-файл не найден или блок отсутствует " + html_filepath, 404
+@data_bp.route('/data/spells/html', methods=['GET'])
+# Получаем информацию о монстре из базы dnd.su (tested)
+def get_spells_html():
+    html_dir = './utils/dndsu'
+    name_query = request.args.get('name', '').strip()
+    if not name_query:
+        return "Имя монстра не указано", 400  # Возвращаем ошибку если имя не задано
+
+    query = """
+        SELECT * FROM spells
+        WHERE name LIKE ? LIMIT 10
+    """
+    with get_db_connection() as conn:
+        results = conn.execute(query, (f"%{name_query}%",)).fetchall()
+
+    if not results:
+        return "Заклинания не найдены", 404
+
+    monsters = [dict(row) for row in results]
+
+    # Работаем с первым результатом (или можно сделать цикл для всех)
+    for monster in monsters:
+        url = monster.get('url')
+        if not url or monster.get('name') != name_query:
+            continue  # Пропускаем, если URL отсутствует
+
+        # Преобразуем URL в имя файла
+        try:
+            filename = url.split('/')[-2]  # Извлекаем последнюю часть URL
+            html_filename = f"spells_{filename}.html"
+            html_filepath = os.path.join(html_dir, html_filename)
+
+            # Проверяем, существует ли файл
+            if os.path.exists(html_filepath):
+                # Открываем файл и ищем нужный блок
+                with open(html_filepath, 'r', encoding='utf-8') as html_file:
+                    soup = BeautifulSoup(html_file, 'html.parser')
+                    block = soup.select_one('.cards-wrapper')
                     if block:
                         return block.decode_contents(), 200
         except Exception as e:
