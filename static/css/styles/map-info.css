@@ -24,3 +24,18 @@
     right: 0px;
     z-index: 999;
 }
+
+#map-controls {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 999;
+
+}
+
+#map-controls button{
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  cursor: pointer;
+}

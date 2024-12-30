@@ -7,9 +7,9 @@
 pyinstaller --onefile --add-data "templates;templates" --add-data "static;static" app.py ; rm .\app.exe; move dist\app.exe .; rm dist
 ```
 
-6. запуск тестов
+6. список используемых библиотек
 ```bash
-npx mocha init/init.js
+pip freeze > requirements.txt
 ```
 
 

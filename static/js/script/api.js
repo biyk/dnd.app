@@ -51,7 +51,7 @@ function sendMakerData() {
 export function sendPolygonsData() {
     if (!window.admin_mode)
     {
-        sendMakerData.call(this);
+        //sendMakerData.call(this);
         return true;
     }
     const polygonsData = this.polygons.map(polygon => ({

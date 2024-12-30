@@ -124,11 +124,17 @@ def save_or_update_spell(card):
     if result:
         # Обновление существующей записи
         cursor.execute('''
-            UPDATE links
-            SET name = ?
+            UPDATE spells
+            SET name = ?,
+             ac = ?,
+             time = ?,
+             ritual = ?
             WHERE link = ?
         ''', (
             card['title'],
+            card['ac'],
+            card['time'],
+            card['ritual'],
             card['link']
         ))
         logger.info(f"Запись для {card['title']} обновлена в базе данных")
@@ -287,6 +293,42 @@ def parse_spell_info(url):
     soup = BeautifulSoup(page_content, 'html.parser')
     spell_data = {}
 
+    try:
+        # Уровень ячейки
+        ac_element = soup.find(class_="size-type-alignment")
+        if ac_element:
+            ac_text = ac_element.text.strip()
+            a_class = re.search(r'\d+', ac_text)
+            spell_data['ac'] = int(a_class.group(0)) if a_class else 0
+            spell_data['ritual'] = '(ритуал)' in ac_text.lower()
+            logger.info(f"Уровень заклинания: {spell_data['ac']}")
+        else:
+            spell_data['ac'] = 0
+            spell_data['ritual'] = False
+            logger.warning(f"Уровень заклинания не найден на странице {full_url}")
+
+        # Время накладывания
+        time_element = soup.find('strong', string="Время накладывания:")
+        if time_element:
+            # Переходим к следующему текстовому узлу после тега <strong>
+            time_text = time_element.next_sibling.strip() if time_element.next_sibling else None
+            if time_text:
+                spell_data['time'] = time_text
+                logger.info(f"Время накладывания: {spell_data['time']}")
+            else:
+                logger.warning(f"Не удалось извлечь текст времени накладывания на странице {full_url}")
+        else:
+            logger.warning(f"Время накладывания не найдено на странице {full_url}")
+
+
+
+    except Exception as e:
+        logger.error(f"Ошибка при парсинге данных на странице {full_url}: {e}")
+        return None
+
+    return spell_data
+
+
 def parse_monster_info(url):
     """
     Парсит информацию о монстре по указанному URL.
@@ -356,6 +398,9 @@ def process_spells():
     cards = get_spells_cards()
     for card in cards:
         spell_info = parse_spell_info(card['link'])
+        card['ac'] = spell_info['ac']
+        card['time'] = spell_info['time']
+        card['ritual'] = spell_info['ritual']
         save_or_update_spell(card)
 
 def process_monsters():

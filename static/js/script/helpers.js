@@ -10,7 +10,12 @@ export function createNumberedIcon(number) {
 export function setAudio(config) {
     const audio = document.getElementById('audio');
     let src = '/static/audio/'+config.ambience+'.mp3';
-    if (audio && audio.src.indexOf(src)==-1) {audio.src = src;audio.play();
+    if (audio && audio.src.indexOf(src)==-1) {
+        audio.src = src;
+
+        if (!localStorage.getItem('auth_code')){
+            audio.play();
+        }
     }
 }
 
@@ -108,4 +113,71 @@ export function toggleAdminMode(){
         this.savedMapCenter = this.map.getCenter();
         this.savedMapZoom = this.map.getZoom();
     }
+}
+
+export function exportImportStorageHandler(){
+    document.querySelectorAll('.leaflet-control a').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            const allData = {};
+
+            // Заполняем объект данными из localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                allData[key] = value;
+            }
+
+            // Преобразуем объект в строку JSON
+            const jsonString = JSON.stringify(allData, null, 2);
+
+            // Создаем Blob с данными JSON
+            const blob = new Blob([jsonString], { type: "application/json" });
+
+            // Создаем ссылку на скачивание
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "localStorageData.json"; // Имя файла
+            document.body.appendChild(link);
+
+            // Инициируем скачивание и удаляем ссылку
+            link.click();
+            document.body.removeChild(link);
+        })
+    })
+}
+
+export function loadSettingsToLocalStorage(){
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.style.zIndex = "999999";
+
+    input.addEventListener("change", (event)=> {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    for (const [key, value] of Object.entries(data)) {
+                        localStorage.setItem(key, value);
+                    }
+                    console.log("Данные успешно импортированы в localStorage!");
+                    this.Spells.displayAll();
+
+                } catch (error) {
+                    console.error("Ошибка при чтении файла:", error);
+                } finally {
+                    input.style.display = "none";
+                    document.body.removeChild(input);
+                }
+            };
+            reader.readAsText(file);
+
+        }
+    });
+
+    document.body.appendChild(input);
+
 }

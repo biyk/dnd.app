@@ -1,5 +1,11 @@
 import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
-import {createNumberedIcon, toggleAdminMode, updateInfoBar} from './script/helpers.js';
+import {
+    createNumberedIcon,
+    toggleAdminMode,
+    updateInfoBar,
+    exportImportStorageHandler,
+    loadSettingsToLocalStorage
+} from './script/helpers.js';
 import {checkTab} from './tabs.js';
 import {drowMarker, createMarkers, updateMarkers, initializeMarkerMenu} from './marker.js';
 import {Settings} from './settings.js';
@@ -11,6 +17,8 @@ import {
     updateMainPolygon
 } from './script/poligons.js'
 import {SlideMenu} from './script/makrer.js'
+import {Inventory} from './script/inventory.js'
+import {Spells} from './spells.js'
 
 class MapManager {
     constructor() {
@@ -53,7 +61,8 @@ class MapManager {
         this.updateInfoBar(config);
         this.settings = new Settings(config.settings);
         this.drawGrid();
-
+        this.Inventory = new Inventory();
+        this.Spells = new Spells();
         setInterval(() => this.checkForConfigUpdates(), 1000);
     }
 
@@ -74,7 +83,7 @@ class MapManager {
         const mapOptions = {
             maxBounds: bounds,
             zoomControl: this.admin_mode,
-            dragging: this.admin_mode,
+            //dragging: this.admin_mode,
             scrollWheelZoom: this.admin_mode,
             doubleClickZoom: this.admin_mode,
             touchZoom: this.admin_mode,
@@ -278,11 +287,16 @@ class MapManager {
                 let auth_code = prompt('Enter auth code');
                 let point = (this.points.get(parseInt(auth_code)));
 
-                if (point ){
+                if (point){
                     localStorage.setItem('auth_code', auth_code);
-                    point.dragging.enable();
-                    console.log(point)
+                    //point.dragging.enable();
+                    console.log(point);
+
+
+                    //загрузка файла TODO в отдельную функцию
+                    loadSettingsToLocalStorage();
                 }
+
             });
         }
 
@@ -293,6 +307,8 @@ class MapManager {
         document.body.addEventListener('admin_mode', (e) => {
             this.toggleAdminMode();
         })
+
+        exportImportStorageHandler();
     }
 
     whenReady(){

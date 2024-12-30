@@ -34,7 +34,7 @@ def fetch_spells_by_name(name_query):
     variants = [name_query.lower(), name_query.capitalize(), name_query.upper()]
     query = f"""
         SELECT * FROM spells
-        WHERE {" OR ".join(["name LIKE ?"] * len(variants))} LIMIT 10
+        WHERE {" OR ".join(["name LIKE ?"] * len(variants))} LIMIT 100
     """
     with get_db_connection() as conn:
         return conn.execute(query, tuple(f"%{v}%" for v in variants)).fetchall()

@@ -5,52 +5,12 @@ body, html, #map {
   width: 100%;
 }
 
-#draw-button {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  z-index: 1000;
-  padding: 10px;
-  background: white;
-  border-radius: 5px;
-  cursor: pointer;
-}
-#reverse-button {
-    position: absolute;
-    bottom: 10px;
-    left: 73px;
-    z-index: 1000;
-    padding: 10px;
-    background: white;
-    border-radius: 5px;
-    cursor: pointer;
-}
-#marker-button {
-    position: absolute;
-    bottom: 10px;
-    left: 154px;
-    z-index: 1000;
-    padding: 10px;
-    background: white;
-    border-radius: 5px;
-    cursor: pointer;
-}
-#measure-button {
-    position: absolute;
-    bottom: 10px;
-    left: 225px;
-    z-index: 1000;
-    padding: 10px;
-    background: white;
-    border-radius: 5px;
-    cursor: pointer;
-}
 
 #audio {
     position: absolute;
     bottom: 10px;
-    left: 10px;
-    z-index: 9999999;
+    left: 75px;
+    z-index: 999;
 }
 
 #map {
@@ -63,4 +23,25 @@ body, html, #map {
     right: 5px;
     z-index: 999;
 }
+
+.side-menu {
+    position: fixed;
+    top: 0px;
+    right: -33%;
+    width: 33%;
+    height: 100%;
+    background: white;
+    transition: 0.3s;
+    box-shadow: rgba(0, 0, 0, 0.3) -2px 0px 5px;
+    z-index: 999;
+    overflow-y: auto;
 }
+
+@media (max-width: 1024px) {
+    .side-menu {
+        width: 80%;
+        right: -80%;
+    }
+}
+
+

@@ -27,8 +27,10 @@ def create_app():
     from routes.polygons import polygons_bp
     from routes.data import data_bp
     from routes.test import test_bp
+    from routes.proxy import proxy_bp
 
     app.register_blueprint(index_bp)
+    app.register_blueprint(proxy_bp)
     app.register_blueprint(config_bp, url_prefix='/api')
     app.register_blueprint(polygons_bp, url_prefix='/api')
     app.register_blueprint(data_bp, url_prefix='/api')

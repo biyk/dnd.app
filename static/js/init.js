@@ -243,7 +243,6 @@ class InitiativeManager {
             document.querySelector(".toggle-form-button.add").addEventListener("click", this.toggleAddCharacterForm.bind(this)); // Новый обработчик
             document.getElementById('add-character-button').addEventListener("click", this.addCharacter.bind(this)); // Обработчик добавления персонажа
 
-
             // Изменяем обработчик для списка монстров
             document.getElementById('npc-input').addEventListener(
                 'input',

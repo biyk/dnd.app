@@ -26,7 +26,6 @@ def get_monsters():
     return jsonify([dict(row) for row in results])
 
 
-
 @data_bp.route('/data/spells/json', methods=['GET'])
 # Поиск монстров (tested)
 def get_spells():
@@ -36,6 +35,7 @@ def get_spells():
 
     results = fetch_spells_by_name(name_query)
     return jsonify([dict(row) for row in results])
+
 
 @data_bp.route('/data/monsters/html', methods=['GET'])
 # Получаем информацию о монстре из базы dnd.su (tested)
@@ -81,6 +81,8 @@ def get_monsters_html():
             return f"Ошибка обработки файла: {e}", 500
 
     return "HTML-файл не найден или блок отсутствует " + html_filepath, 404
+
+
 @data_bp.route('/data/spells/html', methods=['GET'])
 # Получаем информацию о монстре из базы dnd.su (tested)
 def get_spells_html():
@@ -100,18 +102,20 @@ def get_spells_html():
         return "Заклинания не найдены", 404
 
     monsters = [dict(row) for row in results]
+    html_filepath = ''
 
     # Работаем с первым результатом (или можно сделать цикл для всех)
     for monster in monsters:
-        url = monster.get('url')
+        url = monster.get('link')
         if not url or monster.get('name') != name_query:
             continue  # Пропускаем, если URL отсутствует
 
+        filename = url.split('/')[-2]  # Извлекаем последнюю часть URL
+        html_filename = f"spells_{filename}.html"
+        html_filepath = os.path.join(html_dir, html_filename)
+
         # Преобразуем URL в имя файла
         try:
-            filename = url.split('/')[-2]  # Извлекаем последнюю часть URL
-            html_filename = f"spells_{filename}.html"
-            html_filepath = os.path.join(html_dir, html_filename)
 
             # Проверяем, существует ли файл
             if os.path.exists(html_filepath):
