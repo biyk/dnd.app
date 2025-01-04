@@ -22,6 +22,7 @@ export class Spells {
         return (JSON.parse(localStorage.getItem('skills_' + this.auth_code)) || [])
             .sort((a, b) => b.name.localeCompare(a.name));
     }
+
     getRes(){
         return (JSON.parse(localStorage.getItem('resourses_' + this.auth_code)) || [])
             .sort((a, b) => b.name.localeCompare(a.name));
@@ -33,9 +34,9 @@ export class Spells {
     }
 
     displayAll(){
-         displaySkills.call(this);
-          displaySpells.call(this);
-           displayRes.call(this);
+        displaySkills.call(this);
+        displaySpells.call(this);
+        displayRes.call(this);
     }
 
     displaySkills(){
@@ -165,6 +166,7 @@ export class Spells {
     }
 
     saveResourses(){
+        console.log('saveResourses')
         localStorage.setItem(
             `resourses_${this.auth_code}`,
             JSON.stringify(this.resourses)

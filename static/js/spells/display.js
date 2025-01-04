@@ -20,7 +20,8 @@ export function displaySpells() {
 export function displayRes() {
     const list = document.getElementById('my-res-list');
     list.innerHTML = '';
-    this.resourses.forEach((res) => {
+    let that = this;
+    this.resourses.forEach((res, index) => {
         const listItem = document.createElement('li');
         const span = document.createElement('span');
         span.textContent = `${res.name}`;
@@ -32,14 +33,27 @@ export function displayRes() {
             checkbox.type = 'number';
             checkbox.dataset.value = res.count;
             checkbox.dataset.reset = res.reset;
-            checkbox.value = res.count;
+            checkbox.value = res.used;
+            checkbox.onchange = function () {
+                console.log()
+                that.resourses[index].used = checkbox.value;
+                that.saveResourses();
+            }
             listItem.appendChild(checkbox);
         } else {
+            let used = res.used;
             for (let i=1; i <= res.count; i++){
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.dataset.reset = res.reset;
+                checkbox.dataset.id = index;
+                checkbox.name = res.name;
+                checkbox.checked = used-- > 0;
                 listItem.appendChild(checkbox);
+                checkbox.onchange = function() {
+                    that.resourses[index].used = document.querySelectorAll('[name="' + res.name + '"]:checked').length;
+                    that.saveResourses();
+                }
             }
         }
 
@@ -85,10 +99,13 @@ export function renderSpellMenu() {
 
     // Search Field
     const searchField = document.createElement('input');
+    const searchLabel = document.createElement('label');
+    searchLabel.textContent = 'Search for items';
     searchField.type = 'text';
     searchField.placeholder = 'Название заклинания';
     searchField.id = 'spell-search';
-    sidebar.appendChild(searchField);
+    searchLabel.appendChild(searchField);
+    sidebar.appendChild(searchLabel);
 
     //search-list
     const searchResult = document.createElement('ul');

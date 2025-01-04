@@ -6,6 +6,7 @@
     top: 0px;
     left: 0px;
     z-index: 99999;
+    pointer-events: none;
 }
 
 .timer-text {
@@ -34,8 +35,8 @@
 }
 
 #map-controls button{
-  padding: 10px;
-  background: white;
-  border-radius: 5px;
-  cursor: pointer;
+    padding: 10px;
+    background: white;
+    border-radius: 5px;
+    cursor: pointer;
 }
