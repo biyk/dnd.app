@@ -282,18 +282,23 @@ class MapManager {
         }
 
         let authButton = document.getElementById('auth');
+        let settingsButton = document.getElementById('settings');
         if (authButton) {
+            if (localStorage.getItem('auth_code')){
+                settingsButton.style.display = 'block';
+                authButton.style.display = 'none';
+            } else {
+                settingsButton.style.display = 'none';
+                authButton.style.display = 'block';
+            }
             authButton.addEventListener('click', (e) => {
                 let auth_code = prompt('Enter auth code');
                 let point = (this.points.get(parseInt(auth_code)));
 
                 if (point){
                     localStorage.setItem('auth_code', auth_code);
-                    //point.dragging.enable();
-                    console.log(point);
 
-
-                    //загрузка файла TODO в отдельную функцию
+                    //загрузка файла
                     loadSettingsToLocalStorage();
                 }
 
@@ -302,11 +307,11 @@ class MapManager {
 
         document.body.addEventListener('update_config', (e) => {
             this.sendPolygonsData();
-        })
+        });
 
         document.body.addEventListener('admin_mode', (e) => {
             this.toggleAdminMode();
-        })
+        });
 
         exportImportStorageHandler();
     }

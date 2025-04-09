@@ -20,12 +20,12 @@ export class Spells {
 
     getSkills(){
         return (JSON.parse(localStorage.getItem('skills_' + this.auth_code)) || [])
-            .sort((a, b) => b.name.localeCompare(a.name));
+            .sort((a, b) => a.name.localeCompare(b.name));
     }
 
     getRes(){
         return (JSON.parse(localStorage.getItem('resourses_' + this.auth_code)) || [])
-            .sort((a, b) => b.name.localeCompare(a.name));
+            .sort((a, b) => a.name.localeCompare(b.name));
     }
 
     getSpells(){
