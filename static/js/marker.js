@@ -5,17 +5,17 @@ export function drowMarker(data) {
     const marker = L.marker(data.latlng, {
         icon: L.divIcon({
             className: 'custom-marker',
-            html: `<div data-id="${id}">${data.selectedIcon.emoji}</div>`,
+            html: `<span class="custom-marker-number" >${data.selectedIcon.number || ''}</span><div style="width: 60px;" data-id="${id}">${data.selectedIcon.emoji}</div>`,
         }),
         draggable: window.admin_mode //|| parseInt(id) === parseInt(localStorage.getItem('auth_code'))
     }).addTo(this.map);
-    let backgroundColor = data.backgroundColor || getRandomColor();
+    let backgroundColor = data.backgroundColor || data.selectedIcon.backgroundColor || getRandomColor();
     let text = data.text ?? '';
     if (window.admin_mode){
         marker.bindPopup(`
                <button onclick="window.mapManager.removeMarker(${id})">Remove</button>
                <button onclick="window.mapManager.toggleMarker(${id})">Toggle</button>
-               <textarea onchange="window.mapManager.changeMarkerText(${id}, this)">${text}</textarea>
+               <textarea style="width: 300px;" onchange="window.mapManager.changeMarkerText(${id}, this)">${text}</textarea>
            `);
     }
     marker._icon.style.opacity = data.show ? 1 : (window.admin_mode) ? 0.5: 0;
@@ -32,11 +32,14 @@ export function drowMarker(data) {
     marker.on('dragend', (e) => {
         document.body.dispatchEvent(new Event('update_config'));
     })
+    marker.on('popupopen', (e) => {
+        let popup = marker._popup._contentNode.getElementsByTagName('textarea')[0];
+        console.log(popup.style.height = popup.scrollHeight + 'px');
+    })
     this.points.set(id, marker);
 }
 
 export function createMarkers(config){
-    console.log(config.markers)
     if (config.markers){
         config.markers.forEach(markerData => {
             let settings = markerData.settings;
@@ -79,6 +82,9 @@ export function initializeMarkerMenu(){
         const save = document.createElement('button');
         const input_icon = document.createElement('input');
         const input_name = document.createElement('input');
+        const input_number = document.createElement('input');
+        input_icon.style.width = '100px';
+        input_number.style.width = '30px';
         save.innerHTML = 'Save';
         save.value = id;
         button.dataset.id = id;
@@ -88,8 +94,10 @@ export function initializeMarkerMenu(){
         input_icon.value = data.settings.selectedIcon.emoji;
         button.style.backgroundColor = data.settings.backgroundColor;
         input_name.value = data.settings.selectedIcon.name;
+        input_number.value = data.settings.selectedIcon.number ?? '';
         point_div.appendChild(input_icon);
         point_div.appendChild(input_name);
+        point_div.appendChild(input_number);
         point_div.appendChild(button);
         point_div.appendChild(save);
         button.addEventListener('click', () => {
@@ -107,6 +115,7 @@ export function initializeMarkerMenu(){
             icon.innerHTML = new_icon;
             point.settings.selectedIcon.emoji = new_icon;
             point.settings.selectedIcon.name = input_name.value;
+            point.settings.selectedIcon.number = input_number.value;
             document.body.dispatchEvent(new Event('update_config'));
         });
         list.appendChild(point_div);
@@ -114,14 +123,24 @@ export function initializeMarkerMenu(){
     let adding = document.createElement('div');
     let add_input = document.createElement('input');
     let add_name = document.createElement('input');
+    let add_number = document.createElement('input');
     let add_color = document.createElement('input');
     let add_button = document.createElement('button');
+    let color = getRandomColor();
+    add_color.value = color;
+    add_color.style.backgroundColor = color;
+    add_color.addEventListener('keyup', ()=>{
+        add_color.style.backgroundColor = add_color.value;
+    });
+    add_input.style.width = '100px';
+    add_number.style.width = '30px';
     add_button.innerHTML = `Добавить`;
     add_button.addEventListener('click', () => {
         this.selectedIcon = {
             name: add_name.value,
+            number: add_number.value,
             emoji: add_input.value,
-            color: add_color.value
+            backgroundColor: add_color.value
         }; // Запоминаем выбранную иконку
         sidebar.style.display = 'none'; // Скрываем сайдбар
         this.setPolygonClickability(false);
@@ -129,6 +148,8 @@ export function initializeMarkerMenu(){
     adding.appendChild(add_button);
     adding.appendChild(add_input);
     adding.appendChild(add_name);
+    adding.appendChild(add_number);
+    adding.appendChild(add_color);
     list.appendChild(adding);
     sidebar.appendChild(list);
     document.body.appendChild(sidebar);

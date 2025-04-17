@@ -22,3 +22,12 @@
 .marker-menu button.point-button {
     display: inline-block;
 }
+
+.custom-marker-number{
+    position: absolute;
+    font-size: small;
+    color: black;
+    z-index: 2;
+    font-weight: bold;
+    top: -4px;
+}

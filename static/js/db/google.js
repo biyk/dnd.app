@@ -1,3 +1,5 @@
+import {sleep} from "../test/func.js";
+
 export const API_KEY = 'AIzaSyBTTqB_rSfwzuTIdF1gcQ5-U__fGzrQ_zs';
 export const spreadsheetId = '13zsZqGICZKQYMCcGkhgr7pzhH1z-LWFiH0LMrI6NGLM';
 const CLIENT_ID = '21469279904-9vlmm4i93mg88h6qb4ocd2vvs612ai4u.apps.googleusercontent.com';
@@ -188,6 +190,19 @@ export class GoogleSheetDB {
             src: 'https://accounts.google.com/gsi/client',
             onload: this.gisLoaded.bind(this),
         });
+
+        setInterval(async () => {
+            let worked = localStorage.getItem('gapi_token_expires') - this.getTime();
+            document.getElementById('signout_button').textContent = worked;
+            if (worked < 10) {
+                alert('нужно авторизоваться');
+                await sleep(15000);
+            }
+        })
+    }
+
+    getTime(){
+        return Math.floor(Date.now() / 1000)
     }
 
     async gapiLoaded(){
@@ -251,10 +266,9 @@ export class GoogleSheetDB {
             // Сохраняем токен в localStorage
             const token = gapi.client.getToken();
             localStorage.setItem('gapi_token', JSON.stringify(token));
-            localStorage.setItem('gapi_token_expires', JSON.stringify(resp.expires_in));
+            localStorage.setItem('gapi_token_expires', JSON.stringify( this.getTime() + resp.expires_in));
 
 
-            console.log(window.my_client = gapi.client);
         };
 
         if (gapi.client.getToken() === null) {
