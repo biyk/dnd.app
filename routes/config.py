@@ -76,6 +76,13 @@ def get_init_config():
 
 
 # Маршрут для получения конфигурации карты по названию
+def create_config(map_name):
+    map_config = load_config('default')
+    map_config['image'] = map_name;
+    save_config(map_name, map_config)
+    return jsonify(map_config);
+
+
 @config_bp.route('/configs', defaults={'map_name': None}, methods=['GET'])
 @config_bp.route('/configs/<map_name>', methods=['GET'])
 def get_map_config(map_name):
@@ -88,7 +95,7 @@ def get_map_config(map_name):
     # Загружаем конфигурацию
     map_config = load_config(map_name)
     if map_config is None:
-        return jsonify({"error": f"{map_name}.json not found"}), 404
+        return create_config(map_name);
 
     return jsonify(map_config)
 
