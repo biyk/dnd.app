@@ -191,12 +191,12 @@ export class GoogleSheetDB {
             onload: this.gisLoaded.bind(this),
         });
 
-        setInterval(async () => {
+        let timer = setInterval(async () => {
             let worked = localStorage.getItem('gapi_token_expires') - this.getTime();
             document.getElementById('signout_button').textContent = worked;
             if (worked < 10) {
                 alert('нужно авторизоваться');
-                await sleep(15000);
+                clearInterval(timer);
             }
         })
     }
@@ -249,9 +249,8 @@ export class GoogleSheetDB {
     }
 
     eventHandler() {
-        document.getElementById('authorize_button').style.visibility = 'hidden';
         document.getElementById('authorize_button').onclick = this.handleAuthClick.bind(this);
-        document.getElementById('signout_button').style.visibility = 'hidden';
+
         document.getElementById('signout_button').onclick = this.handleSignoutClick.bind(this);
     }
 
@@ -286,7 +285,7 @@ export class GoogleSheetDB {
             localStorage.removeItem('gapi_token'); // удаляем токен из localStorage
             document.getElementById('content').innerText = '';
             document.getElementById('authorize_button').innerText = 'Authorize';
-            document.getElementById('signout_button').style.visibility = 'hidden';
+
         }
     }
 
