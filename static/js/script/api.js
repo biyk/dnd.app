@@ -1,57 +1,89 @@
 
 // Функция для получения начальной конфигурации
 import {setAudio, updateInfoBar} from "./helpers.js";
+import {GoogleSheetDB, spreadsheetId, Table} from "../db/google.js";
 
 export async function getInit() {
-    const response = await fetch('/api/config');
-    if (response.ok) {
-        return response.json();
-    } else {
-        console.error("Error fetching initial config");
-        return null;
-    }
+    let api = window.GoogleSheetDB || new GoogleSheetDB();
+    await api.waitGoogle();
+    let configTable = new Table({
+        list: 'CONFIG',
+        spreadsheetId: spreadsheetId
+    });
+
+    let data = await configTable.getAll({formated:true});
+    return {map: data.map};
 }
 
 // Функция для получения конфигурации карты по имени
 export async function getConfig(mapName) {
     const response = await fetch(`/api/configs/${mapName}`);
+    let result = null;
     if (response.ok) {
-        return response.json();
+        result = response.json();
     } else {
         console.error(`Error fetching map config for ${mapName}`);
-        return null;
     }
+    return result;
+
 }
 
-function sendMakerData() {
-    let id = localStorage.getItem('auth_code');
-
-    if (!id) return false;
-    let point = this.points.get(parseInt(id));
-     point.settings.latlng = point._latlng
-    console.log(point)
-    if (!point) return false;
-        fetch('/api/point', {
+export function sendData(type='polygons') {
+    if (!window.admin_mode) {
+        return true;
+    }
+    const polygonsData = this.polygons.map(polygon => ({
+        points: polygon.points,
+        code: polygon.code,
+        isVisible: polygon.layer.isVisible,
+    }));
+    const markerData = Array.from(this.points.values()).map(point => {
+        point.settings.latlng = point._latlng
+        return {
+            settings: point.settings,
+        };
+    });
+    const center = this.map.getCenter();
+    const zoomLevel = this.map.getZoom();
+    const body = {mapName: this.mapName};
+    switch (type) {
+        case 'polygons':
+            body.polygons = polygonsData;
+            body.mainPolygon = this.mainPolygon ? { points: this.mainPolygon.getLatLngs() } : null;
+            break;
+        case 'markers':
+            body.markers = markerData;
+            break;
+        case 'measure':
+            body.measure = this.measure;
+            break;
+        case 'settings':
+            body.settings = this.settings;
+            break;
+        case 'mapState':
+            body.mapState = {
+                center: {lat: center.lat, lng: center.lng},
+                zoom: zoomLevel,
+            };
+            break;
+    }
+    fetch('/api/polygons', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            mapName: this.mapName,
-            point: point.settings,
-        }),
+        body: JSON.stringify(body),
     })
         .then(response => response.json())
         .then((data) => {
             this.config = data.updatedConfig;
         })
-        .catch(error => console.error("Error sending marker data:", error));;
+        .catch(error => console.error(`Error sending ${type} data:`, error));
 }
 
 export function sendPolygonsData() {
     if (!window.admin_mode)
     {
-        //sendMakerData.call(this);
         return true;
     }
     const polygonsData = this.polygons.map(polygon => ({

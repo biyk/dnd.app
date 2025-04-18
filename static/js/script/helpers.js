@@ -1,3 +1,5 @@
+import {Table, spreadsheetId, GoogleSheetDB, API_KEY} from "../db/google.js";
+
 // Функция для создания кастомного маркера
 export function createNumberedIcon(number) {
     return L.divIcon({className: 'numbered-icon', iconSize: [10, 10], html: `<div style="display: flex; align-items: center;">
@@ -180,4 +182,20 @@ export function loadSettingsToLocalStorage(){
 
     document.body.appendChild(input);
 
+}
+
+export function loadSettingsToLocalStorageFromGoogleSheet(callback){
+    // Загружаем данные при загрузке страницы
+    let api = window.GoogleSheetDB || new GoogleSheetDB();
+
+    let timer = setInterval(async () => {
+        if (api.gisInited && api.gapiInited) {
+            clearInterval(timer);
+            if (api.expired()) {
+                api.handleAuthClick(callback);
+            } else {
+                await callback();
+            }
+        }
+    });
 }

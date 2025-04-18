@@ -1,10 +1,10 @@
-import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates} from './script/api.js';
+import {getInit, getConfig, sendPolygonsData, checkForConfigUpdates, sendData} from './script/api.js';
 import {
     createNumberedIcon,
     toggleAdminMode,
     updateInfoBar,
     exportImportStorageHandler,
-    loadSettingsToLocalStorage
+    loadSettingsToLocalStorage, loadSettingsToLocalStorageFromGoogleSheet
 } from './script/helpers.js';
 import {checkTab} from './tabs.js';
 import {drowMarker, createMarkers, updateMarkers, initializeMarkerMenu} from './marker.js';
@@ -19,6 +19,7 @@ import {
 import {SlideMenu} from './script/makrer.js'
 import {Inventory} from './script/inventory.js'
 import {Spells} from './spells.js'
+import {API_KEY, GoogleSheetDB, spreadsheetId, Table} from "./db/google.js";
 
 class MapManager {
     constructor() {
@@ -63,7 +64,14 @@ class MapManager {
         this.drawGrid();
         this.Inventory = new Inventory();
         this.Spells = new Spells();
-        setInterval(() => this.checkForConfigUpdates(), 1000);
+        this.checkConfig();
+    }
+
+    checkConfig(){
+        setTimeout(async () => {
+            await this.checkForConfigUpdates();
+            this.checkConfig();
+        }, 1000);
     }
 
     initializeMap(config) {
@@ -131,6 +139,9 @@ class MapManager {
     sendPolygonsData() {
         sendPolygonsData.call(this);
     }
+    sendData(type=false) {
+        sendData.call(this, type);
+    }
 
     setDrawButtonHandler() {
         const drawButton = document.getElementById('draw-button');
@@ -165,16 +176,16 @@ class MapManager {
 
     setReverseButtonHandler(config) {
         const reverseButton = document.getElementById('reverse-button');
-        if (!reverseButton) return;
-
-        reverseButton.addEventListener('click', () => {
-            if (this.mainPolygon) {
-                this.updateMainPolygon(config);
-                this.toggleMainPolygonVisibility();
-            } else {
-                this.createMainPolygon(config);
-            }
-        });
+        if (reverseButton) {
+            reverseButton.addEventListener('click', () => {
+                if (this.mainPolygon) {
+                    this.updateMainPolygon(config);
+                    this.toggleMainPolygonVisibility();
+                } else {
+                    this.createMainPolygon(config);
+                }
+            });
+        }
     }
 
     createNewPolygon() {
@@ -231,14 +242,14 @@ class MapManager {
 
     setMapEventHandlers() {
         this.map.on('zoomend', ()=>{
-            this.sendPolygonsData();
+            this.sendData('mapState');
         });
 
         this.map.on('movestart', ()=>{
             document.getElementById('map').style.opacity = '0';
         });
         this.map.on('moveend', ()=>{
-            this.sendPolygonsData();
+            this.sendData('mapState');
             document.getElementById('map').style.opacity = '1';
 
         });
@@ -281,32 +292,49 @@ class MapManager {
             })
         }
 
+
+        //TODO убрать в отдельный файл
+        let callbackLoadData = ()=>{
+            document.body.dispatchEvent(new Event('g-list-ready'));
+        }
         let authButton = document.getElementById('auth');
         let settingsButton = document.getElementById('settings');
         if (authButton) {
-            if (localStorage.getItem('auth_code')){
+            let expired = (localStorage.getItem('gapi_token_expires') - (Math.floor(Date.now() / 1000))) < 10;
+            let auth_code = localStorage.getItem('auth_code')
+            if (auth_code && !expired){
                 settingsButton.style.display = 'block';
                 authButton.style.display = 'none';
+                loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
             } else {
                 settingsButton.style.display = 'none';
                 authButton.style.display = 'block';
             }
             authButton.addEventListener('click', (e) => {
-                let auth_code = prompt('Enter auth code');
+                let auth_code = prompt('Enter auth code', localStorage.getItem('auth_code'));
                 let point = (this.points.get(parseInt(auth_code)));
 
                 if (point){
                     localStorage.setItem('auth_code', auth_code);
 
+                    loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
                     //загрузка файла
                     loadSettingsToLocalStorage();
                 }
 
             });
+        } else {
+            loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
         }
+        //!TODO
 
         document.body.addEventListener('update_config', (e) => {
-            this.sendPolygonsData();
+            let type = e.detail?.type;
+            if (type) {
+                this.sendData(type);
+            }else {
+                this.sendPolygonsData();
+            }
         });
 
         document.body.addEventListener('admin_mode', (e) => {
@@ -338,7 +366,7 @@ class MapManager {
         if (marker) {
             marker.settings.show = !marker.settings.show
             marker._icon.style.opacity = marker.settings.show ? 1 : (admin_mode) ? 0.5: 0;
-            this.Listner.dispatchEvent(new Event('update_config'));
+            this.Listner.dispatchEvent(new CustomEvent('update_config', {detail: {type: 'markers'}}));
         }
     }
 
@@ -370,7 +398,7 @@ class MapManager {
         console.log('Point 1:', point1);
         console.log('Point 2:', point2);
         console.log('Distance (meters):', distance);
-        this.sendPolygonsData();
+        this.sendData('measure');
         // Рисование сетки
         this.drawGrid();
     }
@@ -379,7 +407,6 @@ class MapManager {
     drawGrid() {
         if (this.gridLayer) this.map.removeLayer(this.gridLayer);
         let points = this.measure.points;
-        console.log(points, this.settings.show_grid);
         if (points.length !== 2 || !this.settings.show_grid) return;
 
         const bounds = this.map.getBounds();
@@ -425,8 +452,8 @@ class MapManager {
     changeMarkerText(id, textarea) {
         const marker = this.points.get(id);
         if (marker) {
-            marker.settings.text = textarea.value
-            this.Listner.dispatchEvent(new Event('update_config'));
+            marker.settings.text = textarea.value;
+            this.Listner.dispatchEvent(new CustomEvent('update_config', {detail: {type: 'markers'}}));
         }
     }
 

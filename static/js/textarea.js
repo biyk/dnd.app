@@ -3,9 +3,7 @@ import {Table, spreadsheetId, GoogleSheetDB, API_KEY} from "./db/google.js";
 
 
 // Загружаем данные при загрузке страницы
-let api = new GoogleSheetDB({
-    apiKey: API_KEY,
-    spreadsheetId: spreadsheetId,
+let api = window.GoogleSheetDB || new GoogleSheetDB({
     callback: loadData,
 });
 
@@ -22,7 +20,6 @@ function debounce(func, delay) {
 
 // Функция отправки данных
 async function sendData() {
-    await api.getColumns('DM');
     await table.updateRow(2,{text: textarea.value});
 }
 

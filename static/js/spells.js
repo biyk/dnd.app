@@ -1,6 +1,7 @@
 import {debounce} from './init/func.js';
 import {SpellsApi} from './api/spells.js';
 import {displayRes, displaySpells, renderSpellMenu, displaySkills} from './spells/display.js';
+import {spreadsheetId, Table} from "./db/google.js";
 
 
 
@@ -12,9 +13,10 @@ export class Spells {
         this.spells = this.getSpells();
         this.resourses = this.getRes();
         this.skills = this.getSkills();
-
+        this.playersSheet = '';
         this.initEventListeners();
         this.initializeSlesslMenu();
+
     }
 
 
@@ -109,7 +111,7 @@ export class Spells {
         renderSpellMenu.call(this);
     }
 
-    addResource(res){
+    async addResource(res) {
         const existingItem = this.resourses.find(
             (inventoryItem) => {
                 return inventoryItem.name === res.name
@@ -121,11 +123,11 @@ export class Spells {
         } else {
             this.resourses.push(res);
         }
-        this.saveResourses();
+        await this.saveResourses();
         this.displayRes();
     }
 
-    addSkill(skill){
+    async addSkill(skill) {
         const existingItem = this.skills.find(
             (inventoryItem) => {
                 return inventoryItem.name === skill.name
@@ -137,11 +139,11 @@ export class Spells {
         } else {
             this.skills.push(skill);
         }
-        this.saveSkills();
+        await this.saveSkills();
         this.displaySkills();
     }
 
-    removeRes(res){
+    async removeRes(res) {
         const existingItem = this.resourses.find(
             (inventoryItem) => inventoryItem.name === res.name
         );
@@ -151,33 +153,34 @@ export class Spells {
                 (inventoryItem) => inventoryItem.name !== res.name
             );
 
-            this.saveResourses();
+            await this.saveResourses();
             this.displayRes();
         } else {
             console.warn(`Item with url ${spell.link} not found in inventory.`);
         }
     }
 
-    saveSkills(){
+    async saveSkills() {
         localStorage.setItem(
             `skills_${this.auth_code}`,
             JSON.stringify(this.skills)
         );
+        await this.playerTable.updateRow(3, {code: 'skills', value: JSON.stringify(this.skills)});
+
     }
 
-    saveResourses(){
-        console.log('saveResourses')
+    async saveResourses() {
         localStorage.setItem(
             `resourses_${this.auth_code}`,
             JSON.stringify(this.resourses)
         );
+        await this.playerTable.updateRow(4, {code: 'resourses', value: JSON.stringify(this.resourses)});
+
     }
 
     initEventListeners(){
         document.body.addEventListener('ready_spells', (e) => {
-            this.displaySpells();
-            this.displayRes();
-            this.displaySkills();
+            this.displayAll();
             document.getElementById('spell-search').addEventListener(
                 'input',
                 debounce(async () => {
@@ -195,9 +198,9 @@ export class Spells {
                         spellsList.innerHTML = data.map((npc, index) => `<li data-index="${index}" data-json='${JSON.stringify(npc)}'>${npc.name}</li>`).join('');
                         // Добавляем обработчики клика для каждого элемента списка
                         Array.from(spellsList.querySelectorAll('li')).forEach(li => {
-                            li.addEventListener('click', (event) => {
+                            li.addEventListener('click', async (event) => {
                                 const spellData = JSON.parse(event.target.getAttribute('data-json'));
-                                this.addSpell(spellData);
+                                await this.addSpell(spellData);
                             });
                         });
                     } catch (error) {
@@ -207,10 +210,13 @@ export class Spells {
                 }, 300) // Задержка 300 мс
             );
         });
+        document.body.addEventListener('g-list-ready', async () => {
+            await this.getPlayersSheet();
+        })
 
     }
 
-    addSpell(spell) {
+    async addSpell(spell) {
         const existingItem = this.spells.find(
             (inventoryItem) => {
                 return inventoryItem.link === spell.link
@@ -222,18 +228,21 @@ export class Spells {
         } else {
             this.spells.push(spell);
         }
-        this.saveSpells();
+        await this.saveSpells();
         this.displaySpells();
     }
 
-    saveSpells() {
+    async saveSpells() {
         localStorage.setItem(
             `spells_${this.auth_code}`,
             JSON.stringify(this.spells)
         );
+        await this.playerTable.updateRow(2, {code: 'spells', value: JSON.stringify(this.spells)});
+
     }
 
-    removeSpell(spell) {
+
+    async removeSpell(spell) {
         const existingItem = this.spells.find(
             (inventoryItem) => inventoryItem.link === spell.link
         );
@@ -242,13 +251,14 @@ export class Spells {
             this.spells = this.spells.filter(
                 (inventoryItem) => inventoryItem.link !== spell.link
             );
-            this.saveSpells();
+            await this.saveSpells();
             this.displaySpells();
         } else {
             console.warn(`Item with url ${spell.link} not found in inventory.`);
         }
     }
-    removeSkill(skill) {
+
+    async removeSkill(skill) {
         console.log(this.skills);
         const existingItem = this.skills.find(
             (inventoryItem) => inventoryItem.name === skill.name
@@ -258,15 +268,40 @@ export class Spells {
             this.skills = this.skills.filter(
                 (inventoryItem) => inventoryItem.name !== skill.name
             );
-            this.saveSkills();
+            await this.saveSkills();
             this.displaySkills();
         } else {
             console.warn(`Item with url ${spell.link} not found in inventory.`);
         }
     }
+
     toggleSlideMenu(){
         const sidebar = document.querySelector('.spells-menu');
         sidebar.style.right = sidebar.style.right === '0px' ? '-100%' : '0px';
+    }
+
+    async getPlayersSheet() {
+        let configTable = new Table({
+            list: 'KEYS',
+            spreadsheetId: spreadsheetId
+        });
+        let keys = await configTable.getAll({caching: true});
+        let playersSheet = '';
+        keys.forEach((key) => {
+                if (key[0] == "players") playersSheet = key[1]
+            }
+        );
+        this.playersSheet = playersSheet;
+        let playerTable = new Table({
+            list: localStorage.getItem('auth_code'),
+            spreadsheetId: this.playersSheet
+        });
+        try {
+            await playerTable.createList(playerTable.list);
+        } catch (e) {
+            console.error(e);
+        }
+        this.playerTable = playerTable;
     }
 }
 

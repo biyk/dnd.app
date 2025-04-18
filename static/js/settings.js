@@ -11,7 +11,7 @@ export class Settings {
             show_grid.checked = this.show_grid;
             show_grid.addEventListener('change', () => {
                 this.show_grid = show_grid.checked;
-                this.Listner.dispatchEvent(new Event('update_config'));
+                this.Listner.dispatchEvent(new CustomEvent('update_config', {detail: {type: 'settings'}}));
             });
         };
 

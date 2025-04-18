@@ -14,12 +14,6 @@ def save_polygons():
     data = request.get_json()
 
     map_name = data.get('mapName')
-    polygons_data = data.get('polygons', [])
-    markers_data = data.get('markers', [])
-    map_state = data.get('mapState', {})
-    measure = data.get('measure', {})
-    settings = data.get('settings', {})
-    main_polygon = data.get('mainPolygon', {})
 
     if not map_name:
         return jsonify({"error": "mapName is required"}), 400
@@ -36,6 +30,15 @@ def save_polygons():
             map_config = json.load(f)
     except json.JSONDecodeError:
         return jsonify({"error": f"Error decoding JSON in file '{config_file_path}'"}), 500
+
+    polygons_data = data.get('polygons', map_config['polygons'])
+    markers_data = data.get('markers', map_config['markers'])
+    map_state = data.get('mapState', map_config['mapState'])
+    measure = data.get('measure', map_config['measure'])
+    settings = data.get('settings', map_config['settings'])
+    main_polygon = data.get('mainPolygon', map_config['mainPolygon'])
+
+
 
     # Обработка и обрезка пересекающихся полигонов
     updated_polygons = []

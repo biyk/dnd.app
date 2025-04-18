@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "md5": "^2.3.0",
+    "polygon-clipping": "^0.15.7"
+  }
+}

@@ -30,11 +30,11 @@ export function drowMarker(data) {
         id: id,
     }
     marker.on('dragend', (e) => {
-        document.body.dispatchEvent(new Event('update_config'));
+        document.body.dispatchEvent(new CustomEvent('update_config', {detail: {type: 'markers'}}));
     })
     marker.on('popupopen', (e) => {
         let popup = marker._popup._contentNode.getElementsByTagName('textarea')[0];
-        console.log(popup.style.height = popup.scrollHeight + 'px');
+        popup.style.height = popup.scrollHeight + 'px'
     })
     this.points.set(id, marker);
 }
@@ -116,7 +116,7 @@ export function initializeMarkerMenu(){
             point.settings.selectedIcon.emoji = new_icon;
             point.settings.selectedIcon.name = input_name.value;
             point.settings.selectedIcon.number = input_number.value;
-            document.body.dispatchEvent(new Event('update_config'));
+            document.body.dispatchEvent(new CustomEvent('update_config', {detail: {type: 'markers'}}));
         });
         list.appendChild(point_div);
     });

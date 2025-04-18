@@ -1,4 +1,5 @@
 import {CONFIG} from "../consts.js";
+import {Spells} from "../spells.js";
 
 export function displaySpells() {
     const list = document.getElementById('my-spell-list');
@@ -12,7 +13,7 @@ export function displaySpells() {
 
         const removeSpan = document.createElement('span');
         removeSpan.innerHTML = ' (-)';
-        removeSpan.addEventListener('click', () => this.removeSpell(spell));
+        removeSpan.addEventListener('click', async () => await this.removeSpell(spell));
         listItem.appendChild(removeSpan);
         list.appendChild(listItem);
     });
@@ -34,10 +35,9 @@ export function displayRes() {
             checkbox.dataset.value = res.count;
             checkbox.dataset.reset = res.reset;
             checkbox.value = res.used;
-            checkbox.onchange = function () {
-                console.log()
+            checkbox.onchange = async function () {
                 that.resourses[index].used = checkbox.value;
-                that.saveResourses();
+                await that.saveResourses();
             }
             listItem.appendChild(checkbox);
         } else {
@@ -50,9 +50,9 @@ export function displayRes() {
                 checkbox.name = res.name;
                 checkbox.checked = used-- > 0;
                 listItem.appendChild(checkbox);
-                checkbox.onchange = function() {
+                checkbox.onchange = async function () {
                     that.resourses[index].used = document.querySelectorAll('[name="' + res.name + '"]:checked').length;
-                    that.saveResourses();
+                    await that.saveResourses();
                 }
             }
         }
@@ -60,7 +60,7 @@ export function displayRes() {
 
         const removeSpan = document.createElement('span');
         removeSpan.innerHTML = ' (-)';
-        removeSpan.addEventListener('click', () => this.removeRes(res));
+        removeSpan.addEventListener('click', async () => await this.removeRes(res));
         listItem.appendChild(removeSpan);
         list.appendChild(listItem);
     });
@@ -81,7 +81,7 @@ export function displaySkills() {
 
         const removeSpan = document.createElement('span');
         removeSpan.innerHTML = ' (-)';
-        removeSpan.addEventListener('click', () => this.removeSkill(res));
+        removeSpan.addEventListener('click', async () => await this.removeSkill(res));
         listItem.appendChild(removeSpan);
         list.appendChild(listItem);
     });
@@ -122,7 +122,7 @@ export function renderSpellMenu() {
         button.innerHTML = elem.name;
         button.value = elem.code;
         button.type = 'button';
-        button.onclick = ()=>{
+        button.onclick = async () => {
             document.querySelectorAll(`[data-reset="${elem.code}"]`).forEach(elem => {
                 if (elem.type === 'checkbox') {
                     elem.checked = false;
@@ -132,7 +132,7 @@ export function renderSpellMenu() {
 
 
             });
-            if (elem.code==='long'){
+            if (elem.code === 'long') {
                 document.querySelectorAll(`[data-reset="short"]`).forEach(elem => {
                     if (elem.type === 'checkbox') {
                         elem.checked = false;
@@ -141,8 +141,10 @@ export function renderSpellMenu() {
                     }
                 });
             }
+            await window.mapManager.Spells.saveSpells();
         }
-        title.appendChild(button)
+        title.appendChild(button);
+
     });
     sidebar.appendChild(title)
     //spells
@@ -177,9 +179,9 @@ export function renderSpellMenu() {
 
         const button = document.createElement('button');
         button.innerHTML = '+';
-        button.onclick = (e)=>{
+        button.onclick = async (e) => {
             e.preventDefault();
-            this.addResource({
+            await this.addResource({
                 name: input.value,
                 count: input_count.value,
                 reset: select_reset.value,
@@ -215,9 +217,9 @@ export function renderSpellMenu() {
 
         const button = document.createElement('button');
         button.innerHTML = '+';
-        button.onclick = (e)=>{
+        button.onclick = async (e) => {
             e.preventDefault();
-            this.addSkill({
+            await this.addSkill({
                 name: input.value,
                 text: textarea.value,
             });
