@@ -20,6 +20,7 @@ import {SlideMenu} from './script/makrer.js'
 import {Inventory} from './script/inventory.js'
 import {Spells} from './spells.js'
 import {API_KEY, GoogleSheetDB, spreadsheetId, Table} from "./db/google.js";
+import {loadAmbienceRadios} from "./ambience.js";
 
 class MapManager {
     constructor() {
@@ -64,6 +65,8 @@ class MapManager {
         this.drawGrid();
         this.Inventory = new Inventory();
         this.Spells = new Spells();
+        await loadAmbienceRadios.call(this);
+
         this.checkConfig();
     }
 

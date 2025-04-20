@@ -4,23 +4,22 @@ const CLIENT_ID = '21469279904-9vlmm4i93mg88h6qb4ocd2vvs612ai4u.apps.googleuserc
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
 
-
 class ORM {
-    constructor(columns=[]) {
+    constructor(columns = []) {
         this.columns = columns
     }
 
-    getRaw(data = {}){
+    getRaw(data = {}) {
         let result = [];
-        this.columns.forEach((value, index)=>{
+        this.columns.forEach((value, index) => {
             result[index] = data[value];
         });
         return result;
     }
 
-    getFormated(data=[]){
+    getFormated(data = []) {
         let result = {};
-        this.columns.forEach((value, index)=>{
+        this.columns.forEach((value, index) => {
             result[value] = data[index];
         });
         return result;
@@ -75,6 +74,7 @@ export class Table {
         }
 
     }
+
     async addColumns(values = []) {
         try {
             let res = await this.spreadsheets.values.append({
@@ -94,7 +94,7 @@ export class Table {
         }
 
     }
-    
+
     async deleteRow(rowIndex) {
         const sheetId = await this.getSheetIdByName(this.list);
 
@@ -111,7 +111,7 @@ export class Table {
                             range: {
                                 sheetId: sheetId,
                                 dimension: "ROWS",
-                                startIndex: rowIndex-1,
+                                startIndex: rowIndex - 1,
                                 endIndex: rowIndex
                             }
                         }
@@ -121,7 +121,7 @@ export class Table {
         });
     }
 
-    async updateRow(row, values) {
+    async updateRow(row, values={}) {
         if (!this.columns[this.list]) {
             await this.getColumns(this.list);
         }
@@ -148,6 +148,7 @@ export class Table {
         });
         return response.result.sheets;
     }
+
     async createList(title) {
         // Сначала получаем информацию о таблице
         await this.spreadsheets.get({
@@ -176,7 +177,7 @@ export class Table {
                 ]
             }).then((response) => {
                 console.log('Лист добавлен:', response.result.replies[0].addSheet.properties.sheetId);
-                this.addColumns(['code','value']);
+                this.addColumns(['code', 'value']);
             }).catch((error) => {
                 console.error('Ошибка при добавлении листа:', error);
             });
@@ -185,7 +186,7 @@ export class Table {
         });
     }
 
-    createSpreadSheet(title, callback=null) {
+    createSpreadSheet(title, callback = null) {
         try {
             this.spreadsheets.create({
                 properties: {
@@ -214,26 +215,27 @@ export class Table {
         return await this.api.fetchSheetValues({range, spreadsheetId});
     }
 
-    async getAll(options={}) {
+    async getAll(options = {}) {
         let {caching, formated} = options;
         const range = this.list + '!A1:B1000';
         let spreadsheetId = this.spreadsheetId;
         let response = await this.api.fetchSheetValues({range, spreadsheetId, caching});
-        this.columns[this.list] =response[0];
+        this.columns[this.list] = response[0];
         this.setCodes(response);
-        if (formated){
+        if (formated) {
             return this.formatData(response);
         }
         return response;
     }
 
     async getColumns(list) {
-        if (this.columns[list]) return;
-        const range = (list ? list + '!' : '') + 'A1:Z1';
-        let spreadsheetId = this.spreadsheetId
-        const values = await this.api.fetchSheetValues({range, spreadsheetId});
-        if (values.length > 0) {
-            this.columns[list] = values[0];
+        if (!this.columns[list]) {
+            const range = (list ? list + '!' : '') + 'A1:Z1';
+            let spreadsheetId = this.spreadsheetId;
+            const values = await this.api.fetchSheetValues({range, spreadsheetId});
+            if (values.length > 0) {
+                this.columns[list] = values[0];
+            }
         }
     }
 
@@ -241,6 +243,8 @@ export class Table {
         response.forEach((e, i) => {
             this.codes[e[0]] = i
         });
+        let storageKey = this.spreadsheetId + '/' + this.list;
+        sessionStorage.setItem(storageKey, JSON.stringify(this.codes));
     }
 
     formatData(response) {
@@ -250,10 +254,22 @@ export class Table {
         });
         return result;
     }
+
+    async updateRowByCode(code, values={}) {
+        let storageKey = this.spreadsheetId + '/' + this.list;
+        let stored_codes = sessionStorage.getItem(storageKey);
+        if (!this.codes && stored_codes) {
+            this.codes = stored_codes;
+        } else {
+            await this.getAll()
+        }
+        let id = this.codes[code] + 1;
+       await this.updateRow(id, values);
+    }
 }
 
 export class GoogleSheetDB {
-    constructor(options={}) {
+    constructor(options = {}) {
         this.DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
         this.apiKey = API_KEY;
@@ -297,14 +313,15 @@ export class GoogleSheetDB {
         }
     }
 
-    expired(){
+    expired() {
         return localStorage.getItem('gapi_token_expires') - this.getTime() < 10
     }
-    getTime(){
+
+    getTime() {
         return Math.floor(Date.now() / 1000)
     }
 
-    async gapiLoaded(){
+    async gapiLoaded() {
         gapi.load('client', this.initializeGapiClient.bind(this));
     }
 
@@ -340,7 +357,8 @@ export class GoogleSheetDB {
         this.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
-            callback: () => {}, // пустой, определим в handleAuthClick
+            callback: () => {
+            }, // пустой, определим в handleAuthClick
         });
         this.gisInited = true;
         this.maybeEnableButtons();
@@ -364,7 +382,7 @@ export class GoogleSheetDB {
             // Сохраняем токен в localStorage
             const token = gapi.client.getToken();
             localStorage.setItem('gapi_token', JSON.stringify(token));
-            localStorage.setItem('gapi_token_expires', JSON.stringify( this.getTime() + resp.expires_in));
+            localStorage.setItem('gapi_token_expires', JSON.stringify(this.getTime() + resp.expires_in));
 
             callback();
         };
@@ -394,7 +412,7 @@ export class GoogleSheetDB {
         let data = [];
         let storageKey = range + spreadsheetId;
         let storageData = sessionStorage.getItem(storageKey);
-        if (caching && storageData){
+        if (caching && storageData) {
             return JSON.parse(storageData);
         }
         try {
@@ -417,7 +435,7 @@ export class GoogleSheetDB {
     }
 }
 
-function loadScriptOnce({ src, onload, async = true, defer = true }) {
+function loadScriptOnce({src, onload, async = true, defer = true}) {
     // Проверяем, не загружен ли уже скрипт
     const existingScript = Array.from(document.getElementsByTagName('script'))
         .find(script => script.src === src);

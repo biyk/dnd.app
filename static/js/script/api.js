@@ -10,9 +10,13 @@ export async function getInit() {
         list: 'CONFIG',
         spreadsheetId: spreadsheetId
     });
-
-    let data = await configTable.getAll({formated:true});
-    return {map: data.map};
+    let map  = sessionStorage.getItem('map');
+    if (!map){
+        let data = await configTable.getAll({formated:true});
+        map = data.map;
+        sessionStorage.setItem('map', map);
+    }
+    return {map};
 }
 
 // Функция для получения конфигурации карты по имени
