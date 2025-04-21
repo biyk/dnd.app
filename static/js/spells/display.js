@@ -124,12 +124,18 @@ export function renderSpellMenu() {
         button.type = 'button';
         button.onclick = async () => {
             document.querySelectorAll(`[data-reset="${elem.code}"]`).forEach(elem => {
+                let name = elem.name;
                 if (elem.type === 'checkbox') {
                     elem.checked = false;
                 } else {
                     elem.value = elem.dataset.value;
                 }
 
+                this.resourses.forEach( (e)=> {
+                    if (e.name === name) {
+                        e.used = 0;
+                    }
+                })
 
             });
             if (elem.code === 'long') {
@@ -139,9 +145,22 @@ export function renderSpellMenu() {
                     } else {
                         elem.value = elem.dataset.value;
                     }
+
+                    this.resourses.forEach( (e)=> {
+                        if (e.name === name) {
+                            e.used = 0;
+                        }
+                    })
                 });
             }
-            await window.mapManager.Spells.saveSpells();
+
+            console.log(this.resourses);
+            setTimeout(()=>{
+                window.mapManager.Spells.saveResourses();
+
+            },0)
+
+
         }
         title.appendChild(button);
 

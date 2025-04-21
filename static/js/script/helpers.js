@@ -11,11 +11,11 @@ export function createNumberedIcon(number) {
 
 export function setAudio(config) {
     const audio = document.getElementById('audio');
-    let src = '/static/audio/'+config.ambience+'.mp3';
-    if (audio && audio.src.indexOf(src)==-1) {
+    let src = '/static/audio/' + config.ambience + '.mp3';
+    if (audio && audio.src.indexOf(src) === -1) {
         audio.src = src;
-
-        if (!localStorage.getItem('auth_code')){
+        let auth = localStorage.getItem('auth_code');
+        if (!auth || auth === '1734002000849'){
             audio.play();
         }
     }
@@ -70,7 +70,7 @@ export function setDrawButtonHandler() {
             this.setPolygonClickability(true);
             if (this.polygonPoints.length > 2) {
                 this.createNewPolygon();
-                this.sendPolygonsData();
+                this.sendData('polygons');
             }
         }
     });

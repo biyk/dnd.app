@@ -35,12 +35,12 @@ class MapManager {
         this.lastUpdated = 0; // Последняя временная метка
         this.admin_mode = window.admin_mode || false; // Админ-режим
         this.config = {};
-        this.SlideMenu =  {};
+        this.SlideMenu = {};
         this.selectedIcon = null;
         this.points = new Map();
         this.measure = {};
         this.settings = null;
-        this.Listner =  document.body;
+        this.Listner = document.body;
     }
 
     async initMap() {
@@ -49,7 +49,8 @@ class MapManager {
 
         this.mapName = init.map;
         const config = await getConfig(this.mapName);
-        if (!config) return;
+
+        if (!config) return console.error('no config');
         this.config = config;
         this.lastUpdated = config.lastUpdated;
         this.measure = config.measure;
@@ -70,7 +71,7 @@ class MapManager {
         this.checkConfig();
     }
 
-    checkConfig(){
+    checkConfig() {
         setTimeout(async () => {
             await this.checkForConfigUpdates();
             this.checkConfig();
@@ -79,7 +80,7 @@ class MapManager {
 
     initializeMap(config) {
         const image = `/static/images/${config.image}`;
-        const { width, height, maxLevel, minLevel, orgLevel } = config;
+        const {width, height, maxLevel, minLevel, orgLevel} = config;
 
         const tileWidth = 256 * Math.pow(2, orgLevel);
         const radius = tileWidth / 2 / Math.PI;
@@ -114,10 +115,11 @@ class MapManager {
     }
 
     createPolygons(config) {
-        createPolygons.call(this,config)
+        createPolygons.call(this, config)
     }
+
     createMarkers(config) {
-        createMarkers.call(this,config)
+        createMarkers.call(this, config)
     }
 
     createPolygonClickHandler(polygonLayer) {
@@ -126,14 +128,14 @@ class MapManager {
                 if (e.originalEvent.ctrlKey) {
                     this.map.removeLayer(polygonLayer);
                     this.polygons = this.polygons.filter(p => p.layer !== polygonLayer);
-                    this.sendPolygonsData();
+                    this.sendData('polygons');
                 } else {
                     polygonLayer.isVisible = !polygonLayer.isVisible;
                     polygonLayer.setStyle({
                         fillOpacity: polygonLayer.isVisible ? 1.0 : 0.0,
                         opacity: polygonLayer.isVisible ? 1.0 : 0.0,
                     });
-                    this.sendPolygonsData();
+                    this.sendData('polygons');
                 }
             };
         }
@@ -142,15 +144,16 @@ class MapManager {
     sendPolygonsData() {
         sendPolygonsData.call(this);
     }
-    sendData(type=false) {
-        sendData.call(this, type);
+
+    async sendData(type = false) {
+        await sendData.call(this, type);
     }
 
     setDrawButtonHandler() {
         const drawButton = document.getElementById('draw-button');
         if (!drawButton) return;
 
-        drawButton.addEventListener('click', (e) => {
+        drawButton.addEventListener('click', async (e) => {
             e.preventDefault();
             this.drawingMode = !this.drawingMode;
             drawButton.textContent = this.drawingMode ? "Finish Drawing" : "Draw Polygon";
@@ -164,12 +167,12 @@ class MapManager {
 
                 if (this.polygonPoints.length > 2) {
                     this.createNewPolygon();
-                    this.sendPolygonsData();
+                    await this.sendData('polygons');
                 } else if (this.polygonPoints.length == 2) {
                     this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
                     this.measure.points = this.polygonPoints;
                     this.measure.ft = window.prompt('Сколько футов выделено?', 5);
-                    this.calculateDistanceAndDraw()
+                    await this.calculateDistanceAndDraw()
                 } else {
 
                 }
@@ -220,7 +223,7 @@ class MapManager {
     }
 
     createMainPolygon(config) {
-        createMainPolygon.call(this,config)
+        createMainPolygon.call(this, config)
     }
 
     updateMainPolygon(config) {
@@ -231,33 +234,33 @@ class MapManager {
         await checkForConfigUpdates.call(this);
     }
 
-    updateMarkers(config){
-        updateMarkers.call(this,config);
+    updateMarkers(config) {
+        updateMarkers.call(this, config);
     }
 
     setPolygonsOpacity(opacity) {
-        this.polygons.forEach(polygon => polygon.layer.setStyle({ fillOpacity: opacity, opacity: opacity }));
+        this.polygons.forEach(polygon => polygon.layer.setStyle({fillOpacity: opacity, opacity: opacity}));
     }
 
     setPolygonClickability(clickable) {
-        setPolygonClickability.call(this,clickable)
+        setPolygonClickability.call(this, clickable)
     }
 
     setMapEventHandlers() {
-        this.map.on('zoomend', ()=>{
+        this.map.on('zoomend', async () => {
             this.sendData('mapState');
         });
 
-        this.map.on('movestart', ()=>{
+        this.map.on('movestart', () => {
             document.getElementById('map').style.opacity = '0';
         });
-        this.map.on('moveend', ()=>{
+        this.map.on('moveend', async () => {
             this.sendData('mapState');
             document.getElementById('map').style.opacity = '1';
 
         });
 
-        this.map.on('click', (e) => {
+        this.map.on('click', async (e) => {
             this.lastClick = e.latlng;
             if (this.drawingMode) {
                 this.markerCount += 1;
@@ -280,7 +283,7 @@ class MapManager {
                 document.querySelector('.marker-menu').style.display = 'block'; // Показываем сайдбар
 
                 this.setPolygonClickability(true);
-                this.sendPolygonsData();
+                await this.sendData('polygons');
             }
 
         });
@@ -297,7 +300,7 @@ class MapManager {
 
 
         //TODO убрать в отдельный файл
-        let callbackLoadData = ()=>{
+        let callbackLoadData = () => {
             document.body.dispatchEvent(new Event('g-list-ready'));
         }
         let authButton = document.getElementById('auth');
@@ -305,7 +308,7 @@ class MapManager {
         if (authButton) {
             let expired = (localStorage.getItem('gapi_token_expires') - (Math.floor(Date.now() / 1000))) < 10;
             let auth_code = localStorage.getItem('auth_code')
-            if (auth_code && !expired){
+            if (auth_code && !expired) {
                 settingsButton.style.display = 'block';
                 authButton.style.display = 'none';
                 loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
@@ -317,7 +320,7 @@ class MapManager {
                 let auth_code = prompt('Enter auth code', localStorage.getItem('auth_code'));
                 let point = (this.points.get(parseInt(auth_code)));
 
-                if (point){
+                if (point) {
                     localStorage.setItem('auth_code', auth_code);
 
                     loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
@@ -331,12 +334,13 @@ class MapManager {
         }
         //!TODO
 
-        document.body.addEventListener('update_config', (e) => {
+        document.body.addEventListener('update_config', async (e) => {
             let type = e.detail?.type;
             if (type) {
-                this.sendData(type);
-            }else {
-                this.sendPolygonsData();
+                await this.sendData(type);
+            } else {
+                await this.sendData('polygons');
+                //this.sendPolygonsData();
             }
         });
 
@@ -344,12 +348,40 @@ class MapManager {
             this.toggleAdminMode();
         });
 
+
+        let sync = document.getElementById('google_sync');
+
+        sync && sync.addEventListener('click', async () => {
+            let api = window.GoogleSheetDB || new GoogleSheetDB();
+            await api.waitGoogle();
+            let configTable = new Table({
+                list: 'CONFIG',
+                spreadsheetId: spreadsheetId
+            });
+            let keysTable = new Table({
+                list: 'KEYS',
+                spreadsheetId: spreadsheetId
+            });
+            let keys = await keysTable.getAll({formated: true, caching: true});
+
+            let mapTable = new Table({
+                list: this.config.image,
+                spreadsheetId: keys.maps
+            });
+
+            await mapTable.createList();
+            for (let code in this.config) {
+                await mapTable.updateRowByCode(code, {code, value: this.config[code]})
+            }
+        })
+
+        exportImportStorageHandler();
         exportImportStorageHandler();
     }
 
-    whenReady(){
+    whenReady() {
         checkTab();
-        this.SlideMenu =  new SlideMenu();
+        this.SlideMenu = new SlideMenu();
         this.SlideMenu.initializeMapMarkers(this.map);
     }
 
@@ -364,17 +396,18 @@ class MapManager {
             this.points.delete(index);
         }
     }
+
     toggleMarker(index) {
         const marker = this.points.get(index);
         if (marker) {
             marker.settings.show = !marker.settings.show
-            marker._icon.style.opacity = marker.settings.show ? 1 : (admin_mode) ? 0.5: 0;
+            marker._icon.style.opacity = marker.settings.show ? 1 : (admin_mode) ? 0.5 : 0;
             this.Listner.dispatchEvent(new CustomEvent('update_config', {detail: {type: 'markers'}}));
         }
     }
 
     updateInfoBar(data) {
-      updateInfoBar(data);
+        updateInfoBar(data);
     }
 
     initializeMarkerMenu() {
@@ -383,7 +416,7 @@ class MapManager {
     }
 
     // Функция для расчета расстояния, добавления маркеров, линии и сетки
-    calculateDistanceAndDraw() {
+    async calculateDistanceAndDraw() {
         let points = this.measure.points;
         if (points.length !== 2) {
             console.error('The function requires exactly two points.');
@@ -401,7 +434,7 @@ class MapManager {
         console.log('Point 1:', point1);
         console.log('Point 2:', point2);
         console.log('Distance (meters):', distance);
-        this.sendData('measure');
+        await this.sendData('measure');
         // Рисование сетки
         this.drawGrid();
     }
@@ -418,10 +451,10 @@ class MapManager {
         // Определение двух точек и расчёт расстояния между ними в пикселях
         const point1 = map.project([points[0][0], points[0][1]]);
         const point2 = map.project([points[1][0], points[1][1]]);
-        const cell_per_step = parseInt(this.measure.ft)/5
+        const cell_per_step = parseInt(this.measure.ft) / 5
         const stepPixels = Math.sqrt(
             Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2)
-        )/cell_per_step;
+        ) / cell_per_step;
 
         // Определение начальных и конечных точек в пикселях
         const topLeft = map.project(bounds.getNorthWest());
@@ -430,23 +463,23 @@ class MapManager {
         const lines = [];
         const lines_count = 100
         // Горизонтальные линии
-        for (let y = point1.y - lines_count*stepPixels; y <= bottomRight.y; y += stepPixels) {
+        for (let y = point1.y - lines_count * stepPixels; y <= bottomRight.y; y += stepPixels) {
             const start = map.unproject([topLeft.x, y]);
             const end = map.unproject([bottomRight.x, y]);
             lines.push(L.polyline([
                 [start.lat, start.lng],
                 [end.lat, end.lng]
-            ], { color: 'blue', weight: 1 }));
+            ], {color: 'blue', weight: 1}));
         }
 
         // Вертикальные линии
-        for (let x = point1.x - lines_count*stepPixels; x <= bottomRight.x; x += stepPixels) {
+        for (let x = point1.x - lines_count * stepPixels; x <= bottomRight.x; x += stepPixels) {
             const start = map.unproject([x, topLeft.y]);
             const end = map.unproject([x, bottomRight.y]);
             lines.push(L.polyline([
                 [start.lat, start.lng],
                 [end.lat, end.lng]
-            ], { color: 'blue', weight: 1 }));
+            ], {color: 'blue', weight: 1}));
         }
 
         this.gridLayer = L.layerGroup(lines).addTo(map);

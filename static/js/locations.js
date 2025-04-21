@@ -23,7 +23,7 @@ export class LocationManager {
     }
 
     async init() {
-        await this.loadMainLocations();
+        //await this.loadMainLocations();
         this.mainLocationSelect.addEventListener('change', () => this.loadSubLocations());
         this.addLocationBtn.addEventListener('click', () => this.toggleForm(true));
         this.saveLocationBtn.addEventListener('click', () => this.addNewLocation());
@@ -35,7 +35,7 @@ export class LocationManager {
     }
 
     async loadMainLocations() {
-        await loadMainLocations.call(this);
+        //await loadMainLocations.call(this);
     }
 
     hideEditPopup() {
@@ -44,7 +44,7 @@ export class LocationManager {
     }
 
     async loadSubLocations() {
-        await loadSubLocations.call(this);
+        //await loadSubLocations.call(this);
     }
 
     async removeLocation(location) {

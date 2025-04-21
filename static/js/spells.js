@@ -165,16 +165,17 @@ export class Spells {
             `skills_${this.auth_code}`,
             JSON.stringify(this.skills)
         );
-        await this.playerTable.updateRow(3, {code: 'skills', value: JSON.stringify(this.skills)});
+        await this.playerTable.updateRowByCode('skills', {code: 'skills', value: JSON.stringify(this.skills)});
 
     }
 
     async saveResourses() {
+        console.info('saveResourses');
         localStorage.setItem(
             `resourses_${this.auth_code}`,
             JSON.stringify(this.resourses)
         );
-        await this.playerTable.updateRow(4, {code: 'resourses', value: JSON.stringify(this.resourses)});
+        await this.playerTable.updateRowByCode('resourses', {code: 'resourses', value: JSON.stringify(this.resourses)});
 
     }
 
@@ -237,7 +238,7 @@ export class Spells {
             `spells_${this.auth_code}`,
             JSON.stringify(this.spells)
         );
-        await this.playerTable.updateRow(2, {code: 'spells', value: JSON.stringify(this.spells)});
+        await this.playerTable.updateRowByCode('spells', {code: 'spells', value: JSON.stringify(this.spells)});
 
     }
 

@@ -1,5 +1,6 @@
 // Функция для загрузки радиобаттонов и отправки данных на сервер
 import {GoogleSheetDB, spreadsheetId, Table} from "./db/google.js";
+import {getMapTable} from "./script/api.js";
 
 export async function loadAmbienceRadios() {
     try {
@@ -26,16 +27,17 @@ export async function loadAmbienceRadios() {
                 label.htmlFor = `radio-${key}`;
                 label.textContent = value;
                 // Добавляем радио-кнопку и метку в контейнер
-                container.appendChild(radio);
-                container.appendChild(label);
+                if (container){
+                    container.appendChild(radio);
+                    container.appendChild(label);
+                }
+
                 // Добавляем обработчик для отправки значения на сервер при выборе радио-кнопки
                 radio.addEventListener('change', async () => {
-                    let configTable = new Table({
-                        list: 'CONFIG',
-                        spreadsheetId: spreadsheetId
-                    });
+                    let mapTable = await getMapTable();
+
                     try {
-                        await configTable.updateRowByCode('ambience', {value: radio.value});
+                        await mapTable.updateRowByCode('ambience', {value: radio.value});
 
                         console.log(`Отправлено значение: ${radio.value}`);
                     } catch (error) {

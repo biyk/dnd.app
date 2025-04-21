@@ -17,7 +17,7 @@ export class NpcManager {
         this.npcTemplate = el('npc-template');
         this.npcForm = el('npc-form');
         this.monsters = new Map();
-        this.NpcApi = new NpcApi();
+        //this.NpcApi = new NpcApi();
         this.init();
     }
 
@@ -25,7 +25,7 @@ export class NpcManager {
         this.searchNpcInput.addEventListener('input', debounce(() => this.searchNpc(), 300));
         this.addNpcButton.addEventListener('click', this.addNpcAction.bind(this));
         this.updateNpcButton.addEventListener('click', this.updateNpcAction.bind(this));
-        await this.loadNpc()
+        //await this.loadNpc()
     }
 
     async loadNpc() {
