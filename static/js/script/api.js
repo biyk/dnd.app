@@ -36,7 +36,9 @@ export async function getInit() {
     let data = await configTable.getAll({caching: true, formated: true});
     let mapTable = await getMapTable();
     let mapData = await mapTable.getAll({formated: true});
-    await checkData(mapData);
+    if (window.admin_mode){
+        await checkData(mapData);
+    }
     return data;
 }
 
@@ -201,5 +203,17 @@ export async function getMapTable() {
     return new Table({
         list: config.map,
         spreadsheetId: keys.maps
+    });
+}
+
+export async function getPlayerTable() {
+    let keysTable = new Table({
+        list: 'KEYS',
+        spreadsheetId: spreadsheetId
+    });
+    let keys = await keysTable.getAll({caching: true, formated: true});
+    return new Table({
+        list: localStorage.getItem('auth_code'),
+        spreadsheetId: keys.players
     });
 }

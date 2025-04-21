@@ -44,8 +44,9 @@ class MapManager {
     }
 
     async initMap() {
+        await this.doAuth();
         const init = await getInit();
-        if (!init) return;
+        if (!init) return console.error('no init');
 
         this.mapName = init.map;
         const config = await getConfig(this.mapName);
@@ -71,6 +72,38 @@ class MapManager {
         this.checkConfig();
     }
 
+    async doAuth() {
+        let api = window.GoogleSheetDB || new GoogleSheetDB();
+        await api.waitGoogle();
+        let callbackLoadData = () => {
+            document.body.dispatchEvent(new Event('g-list-ready'));
+        }
+        let authButton = document.getElementById('auth');
+        let settingsButton = document.getElementById('settings');
+
+        if (authButton) {
+            let expired = api.expired();
+            let auth_code = localStorage.getItem('auth_code');
+
+            if (auth_code && !expired) {
+                settingsButton.style.display = 'block';
+                authButton.style.display = 'none';
+            } else {
+                settingsButton.style.display = 'none';
+                authButton.style.display = 'block';
+            }
+            authButton.addEventListener('click', async (e) => {
+                let auth_code = prompt('Enter auth code', localStorage.getItem('auth_code'));
+                localStorage.setItem('auth_code', auth_code);
+
+                await api.handleAuthClick(callbackLoadData);
+                //загрузка файла
+                loadSettingsToLocalStorage();
+
+            });
+        } else {
+        }
+    }
     checkConfig() {
         setTimeout(async () => {
             await this.checkForConfigUpdates();
@@ -79,7 +112,7 @@ class MapManager {
     }
 
     initializeMap(config) {
-        const image = `/static/images/${config.image}`;
+        const image = `static/images/${config.image}`;
         const {width, height, maxLevel, minLevel, orgLevel} = config;
 
         const tileWidth = 256 * Math.pow(2, orgLevel);
@@ -299,41 +332,6 @@ class MapManager {
         }
 
 
-        //TODO убрать в отдельный файл
-        let callbackLoadData = () => {
-            document.body.dispatchEvent(new Event('g-list-ready'));
-        }
-        let authButton = document.getElementById('auth');
-        let settingsButton = document.getElementById('settings');
-        if (authButton) {
-            let expired = (localStorage.getItem('gapi_token_expires') - (Math.floor(Date.now() / 1000))) < 10;
-            let auth_code = localStorage.getItem('auth_code')
-            if (auth_code && !expired) {
-                settingsButton.style.display = 'block';
-                authButton.style.display = 'none';
-                loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
-            } else {
-                settingsButton.style.display = 'none';
-                authButton.style.display = 'block';
-            }
-            authButton.addEventListener('click', (e) => {
-                let auth_code = prompt('Enter auth code', localStorage.getItem('auth_code'));
-                let point = (this.points.get(parseInt(auth_code)));
-
-                if (point) {
-                    localStorage.setItem('auth_code', auth_code);
-
-                    loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
-                    //загрузка файла
-                    loadSettingsToLocalStorage();
-                }
-
-            });
-        } else {
-            loadSettingsToLocalStorageFromGoogleSheet(callbackLoadData);
-        }
-        //!TODO
-
         document.body.addEventListener('update_config', async (e) => {
             let type = e.detail?.type;
             if (type) {
@@ -375,7 +373,6 @@ class MapManager {
             }
         })
 
-        exportImportStorageHandler();
         exportImportStorageHandler();
     }
 

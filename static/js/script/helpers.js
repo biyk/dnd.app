@@ -184,18 +184,13 @@ export function loadSettingsToLocalStorage(){
 
 }
 
-export function loadSettingsToLocalStorageFromGoogleSheet(callback){
+export async function loadSettingsToLocalStorageFromGoogleSheet(callback) {
     // Загружаем данные при загрузке страницы
     let api = window.GoogleSheetDB || new GoogleSheetDB();
-
-    let timer = setInterval(async () => {
-        if (api.gisInited && api.gapiInited) {
-            clearInterval(timer);
-            if (api.expired()) {
-                api.handleAuthClick(callback);
-            } else {
-                await callback();
-            }
-        }
-    });
+    await api.waitGoogle();
+    if (api.expired()) {
+        api.handleAuthClick(callback);
+    } else {
+        await callback();
+    }
 }
