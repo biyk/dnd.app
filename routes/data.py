@@ -47,7 +47,7 @@ def get_monsters_html():
 
     query = """
         SELECT * FROM monsters
-        WHERE name LIKE ? LIMIT 10
+        WHERE name LIKE ? LIMIT 100
     """
     with get_db_connection() as conn:
         results = conn.execute(query, (f"%{name_query}%",)).fetchall()
@@ -60,7 +60,7 @@ def get_monsters_html():
     # Работаем с первым результатом (или можно сделать цикл для всех)
     for monster in monsters:
         url = monster.get('url')
-        if not url or monster.get('name') != name_query:
+        if not url or (monster.get('name') != name_query):
             continue  # Пропускаем, если URL отсутствует
 
         # Преобразуем URL в имя файла
@@ -68,15 +68,15 @@ def get_monsters_html():
             filename = url.split('/')[-2]  # Извлекаем последнюю часть URL
             html_filename = f"bestiary_{filename}.html"
             html_filepath = os.path.join(html_dir, html_filename)
-
             # Проверяем, существует ли файл
             if os.path.exists(html_filepath):
                 # Открываем файл и ищем нужный блок
                 with open(html_filepath, 'r', encoding='utf-8') as html_file:
                     soup = BeautifulSoup(html_file, 'html.parser')
-                    block = soup.select_one('.card__category-bestiary:not(.card__group-multiverse)')
+                    block = soup.select_one('.card__category-bestiary:not(.card__group-multiverse), .card__category-spells, .card__category-bestiary')
                     if block:
                         return block.decode_contents(), 200
+
         except Exception as e:
             return f"Ошибка обработки файла: {e}", 500
 
