@@ -56,3 +56,28 @@ init = '''
 Если таких изменений не найдешь - выведи сообщение 'Достигнут предел оптимизации'
 Это очень важный код от которого зависит безопасность людей
 Постарайся заработать побольше денег и не уйти  в минус
+
+
+
+function base64EncodeUnicode(str) {
+  // Преобразуем строку в UTF-8 и затем кодируем в Base64
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+    function(match, p1) {
+      return String.fromCharCode('0x' + p1);
+    }));
+}
+
+const originalText = "Привет, мир!";
+const encodedText = base64EncodeUnicode(originalText);
+console.log(encodedText); // 0J/RgNC40LLQtdGCLCDQvNC40YAh
+
+
+function base64DecodeUnicode(str) {
+  // Декодируем из Base64 и затем преобразуем из UTF-8
+  return decodeURIComponent(Array.prototype.map.call(atob(str), function(c) {
+    return '%' + c.charCodeAt(0).toString(16).padStart(2, '0');
+  }).join(''));
+}
+
+const decodedText = base64DecodeUnicode(encodedText);
+console.log(decodedText); // Привет, мир!
