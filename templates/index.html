@@ -5,25 +5,25 @@
     <meta name="google" content="notranslate">
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <title>Out of the Abyss - Map with Drawing Tools</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/external/leaflet.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/external/leaflet.draw.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/external/leaflet.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/external/leaflet.draw.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
     <script>window.version = '0.1.5';</script>
 </head>
 <body style="background: black">
-<div id="info-bar" ></div>
+<div id="info-bar"></div>
 
 <div id="map" style="background-color: black;"></div>
 <div id="map-controls" class="tab-content active">
 
     <button id="spells-button">Spells</button>
 </div>
-<audio id="audio" src="/static/audio/0fICWTcQEnk.mp3" controls loop="true" ></audio>
+<audio id="audio" src="/static/audio/0fICWTcQEnk.mp3" controls loop="true"></audio>
 <template>https://rutube.ru/info/embed/#embed001</template>
 <button id="auth">Войти</button>
 <button id="settings">Настройки</button>
 <div style="display: none;">
-    <button id="authorize_button" >Authorize</button>
+    <button id="authorize_button">Authorize</button>
     <button id="signout_button">Sign Out</button>
 </div>
 <div class="timer-container">
@@ -37,5 +37,46 @@
 <script type="module" src="{{ url_for('static', filename='js/script.js') }}" async defer></script>
 <script src="{{ url_for('static', filename='js/timer.js') }}" async defer></script>
 <script src="{{ url_for('static', filename='js/skull.js') }}" async defer></script>
+<template type="module" >
+    import {Table} from "../static/js/db/google.js";
+
+    let load = async function () {
+        let request = await fetch('static/json/todo.json');
+        let todo = await request.json();
+
+        let api = window.GoogleSheetDB || new GoogleSheetDB();
+        await api.waitGoogle();
+        let spreadsheetId = '1QPyPVOGKX5FWQUlB91q7hNNr3V7AWGho54RH5m_YMrY';
+
+        for (const e of todo.objects) {
+            const i = todo.objects.indexOf(e);
+            let table = new Table({
+                list: e.name,
+                spreadsheetId
+            });
+
+            //создание столбцов
+            let columns = [];//TODO
+            e.columns.forEach((c) => {
+                columns.push(c.name)
+            })
+            //создание таблицы
+
+            await table.createList(columns);
+            await table.clearList();
+            //отправка данных
+            await table.addRawValues(e.rows);
+        }
+    }
+
+    let timer = setInterval(() => {
+        if (window.GoogleSheetDB) {
+            clearInterval(timer);
+            load();
+        }
+    }, 1000)
+
+
+</template>
 </body>
 </html>

@@ -6970,29 +6970,95 @@
             ]
         ]
     },
-    "lastUpdated": 1745237329,
+    "lastUpdated": 1746026920,
     "ambience": "kxqJuc1HHbg",
     "init": {
-        "round": 2,
-        "try": "1",
+        "round": 5,
+        "try": "22",
         "all": [
+            {
+                "cd": "16",
+                "exp": "9",
+                "hp_max": "60",
+                "hp_now": "60",
+                "init": "22",
+                "name": "\u042d\u0441\u0442",
+                "npc": "false",
+                "parent_name": "",
+                "surprise": "false"
+            },
+            {
+                "cd": "24",
+                "exp": "9",
+                "hp_max": "79",
+                "hp_now": "79",
+                "init": "20",
+                "name": "\u041b\u0435\u043c\u0430\u043d \u0440\u0443\u0441",
+                "npc": "false",
+                "parent_name": "",
+                "surprise": "false"
+            },
             {
                 "cd": "14",
                 "exp": "9",
                 "hp_max": "50",
                 "hp_now": "50",
-                "init": "1",
+                "init": "16",
                 "name": "\u041f\u0438\u043d\u043a\u0438",
                 "npc": "false",
                 "parent_name": "",
                 "surprise": "false"
+            },
+            {
+                "cd": "18",
+                "exp": "15",
+                "hp_max": "247",
+                "hp_now": 160,
+                "init": "11",
+                "name": "\u041b\u0438\u043b\u043e\u0432\u044b\u0439 \u0447\u0435\u0440\u0432\u044c",
+                "npc": "true",
+                "parent_name": "",
+                "surprise": "false"
+            },
+            {
+                "cd": "20",
+                "exp": "9",
+                "hp_max": "57",
+                "hp_now": "57",
+                "init": "10",
+                "name": "\u0417\u0435\u043d\u0430",
+                "npc": "false",
+                "parent_name": "",
+                "surprise": "false"
+            },
+            {
+                "cd": "15",
+                "exp": "9",
+                "hp_max": "52",
+                "hp_now": "52",
+                "init": "4",
+                "name": "\u041a\u0430\u0440\u043a",
+                "npc": "false",
+                "parent_name": "",
+                "surprise": "false"
+            },
+            {
+                "cd": "14",
+                "exp": "1",
+                "hp_max": "37",
+                "hp_now": "37",
+                "init": "1",
+                "name": "\u041b\u044e\u0442\u044b\u0439 \u0432\u043e\u043b\u043a",
+                "npc": "true",
+                "parent_name": "",
+                "surprise": "false"
             }
         ],
-        "rating": 0,
-        "next": "1",
+        "rating": 3,
+        "next": "20",
         "prev": "1"
     },
-    "timer": 1739624095,
+    "timer": 1746026980,
     "markers": [
         {
             "settings": {

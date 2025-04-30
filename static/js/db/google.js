@@ -1,3 +1,5 @@
+import {WebStorage} from "./webStorage.js";
+
 export const API_KEY = 'AIzaSyBTTqB_rSfwzuTIdF1gcQ5-U__fGzrQ_zs';
 export const spreadsheetId = '13zsZqGICZKQYMCcGkhgr7pzhH1z-LWFiH0LMrI6NGLM';
 const CLIENT_ID = '21469279904-9vlmm4i93mg88h6qb4ocd2vvs612ai4u.apps.googleusercontent.com';
@@ -59,6 +61,29 @@ export class Table {
         return sheetId;
     }
 
+    async addRawValues(values = []) {
+        await this.waitSending();
+        try {
+            this.sending = true;
+            let res = await this.spreadsheets.values.append({
+                spreadsheetId: this.spreadsheetId,
+                range: this.list + '!A1:Z1',
+                valueInputOption: "RAW",
+                insertDataOption: "INSERT_ROWS",
+                resource: {
+                    majorDimension: "ROWS",
+                    values: values,
+                    //values: [["Engine", "$100", "1", "3/20/2016"]],
+                }
+            });
+            console.log(res);
+        } catch (e) {
+            console.error(e)
+        } finally {
+            this.sending = false;
+        }
+    }
+
     async addRow(values = {}) {
 
         if (!this.columns[this.list]) {
@@ -74,25 +99,7 @@ export class Table {
         let table = new ORM(this.columns[this.list]);
         let rawValue = table.getRaw(values);
         await this.waitSending();
-        try {
-            this.sending = true;
-            let res = await this.spreadsheets.values.append({
-                spreadsheetId: this.spreadsheetId,
-                range: this.list + '!A1:Z1',
-                valueInputOption: "RAW",
-                insertDataOption: "INSERT_ROWS",
-                resource: {
-                    majorDimension: "ROWS",
-                    values: [rawValue],
-                    //values: [["Engine", "$100", "1", "3/20/2016"]],
-                }
-            });
-            console.log(res);
-        } catch (e) {
-            console.error(e)
-        } finally {
-            this.sending = false;
-        }
+        await this.addRawValues([rawValue]);
 
     }
 
@@ -156,6 +163,7 @@ export class Table {
         }
         let table = new ORM(this.columns[this.list]);
         let rawValue = table.getRaw(values);
+        console.log(values, rawValue);
         console.debug('values.update',new Error().stack);
         this.waitSending();
         this.sending = true;
@@ -251,7 +259,7 @@ export class Table {
 
     async getAll(options = {}) {
         let {caching, formated} = options;
-        const range = this.list + '!A1:Z1000';
+        const range = this.list + '!A1:Z5000';
         let spreadsheetId = this.spreadsheetId;
         let response = await this.api.fetchSheetValues({range, spreadsheetId, caching});
         if (response){
@@ -505,6 +513,7 @@ export class GoogleSheetDB {
     }
 
     async fetchSheetValues(options) {
+        const webStorage = new WebStorage();
         if (this.expired()) {
             console.error('Нужно авторизоваться');
             return false;
@@ -513,7 +522,7 @@ export class GoogleSheetDB {
         let response;
         let data = [];
         let storageKey = range + spreadsheetId;
-        let storageData = sessionStorage.getItem(storageKey);
+        let storageData = await webStorage.getItem(storageKey);
         if (caching && storageData) {
             return JSON.parse(storageData);
         }
@@ -533,7 +542,7 @@ export class GoogleSheetDB {
             return data;
         }
         data = result.values;
-        sessionStorage.setItem(storageKey, JSON.stringify(data));
+        await webStorage.setItem(storageKey, JSON.stringify(data));
         return data;
     }
 }
