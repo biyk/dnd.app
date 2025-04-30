@@ -33,7 +33,7 @@ export async function getInit() {
         list: 'CONFIG',
         spreadsheetId: spreadsheetId
     });
-    let data = await configTable.getAll({caching: true, formated: true});
+    let data = await configTable.getAll({formated: true});
     let mapTable = await getMapTable();
     let mapData = await mapTable.getAll({formated: true});
     if (window.admin_mode){
@@ -59,7 +59,7 @@ export async function sendData(type = 'polygons') {
     const polygonsData = this.polygons.map(polygon => ({
         points: polygon.points,
         code: polygon.code,
-        isVisible: polygon.layer.isVisible,
+        isVisible: polygon.isVisible,
     }));
     const markerData = Array.from(this.points.values()).map(point => {
         point.settings.latlng = point._latlng

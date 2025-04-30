@@ -4,7 +4,7 @@ import {
     toggleAdminMode,
     updateInfoBar,
     exportImportStorageHandler,
-    loadSettingsToLocalStorage, loadSettingsToLocalStorageFromGoogleSheet
+    loadSettingsToLocalStorage, loadSettingsToLocalStorageFromGoogleSheet, processPolygons
 } from './script/helpers.js';
 import {checkTab} from './tabs.js';
 import {drowMarker, createMarkers, updateMarkers, initializeMarkerMenu} from './marker.js';
@@ -245,13 +245,16 @@ class MapManager {
         this.polygons.push({
             layer: polygonLayer,
             points: this.polygonPoints,
-            isVisible: polygonLayer.isVisible,
+            code: md5(new Date()),
+            isVisible: polygonLayer.isVisible || false,
         });
 
         this.polygonMarkers.forEach(marker => this.map.removeLayer(marker));
         this.polygonMarkers = [];
         this.polygonPoints = [];
         this.markerCount = 0;
+        //TODO поправить пересечения
+        this.polygons = (processPolygons(this.polygons));
     }
 
     toggleMainPolygonVisibility() {

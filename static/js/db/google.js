@@ -14,13 +14,17 @@ export class ORM {
     getRaw(data = {}) {
         let result = [];
         this.columns.forEach((value, index) => {
-            //console.log(index, value ,data[value])
+            console.log(index, value ,data[value])
 
-            if (typeof data[value] == 'object') {
-                result[index] = JSON.stringify(data[value]);
+            if (value === 'value') {
+                const raw = typeof data[value] === 'object' ? JSON.stringify(data[value]) : data[value];
+                const chunks = raw.match(/.{1,49000}/g);
+                result[index] = chunks[0];
+                result.push(...chunks.slice(1));
             } else {
                 result[index] = data[value];
             }
+
         });
         return result;
     }
@@ -163,7 +167,7 @@ export class Table {
         }
         let table = new ORM(this.columns[this.list]);
         let rawValue = table.getRaw(values);
-        console.log(values, rawValue);
+
         console.debug('values.update',new Error().stack);
         this.waitSending();
         this.sending = true;
@@ -296,9 +300,10 @@ export class Table {
 
     formatData(response) {
         let result = {};
+
         response.forEach((e, i) => {
             if ('{['.includes(e[1][0])) {
-                result[e[0]] = JSON.parse(e[1])
+                result[e[0]] = JSON.parse(e.slice(1).join(''))
             } else {
                 result[e[0]] = e[1]
             }
